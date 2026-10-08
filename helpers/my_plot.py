@@ -1,5 +1,6 @@
 from matplotlib import pyplot as plt
 import seaborn as sb
+import numpy as np
 
 # ----------------------------------------------------------
 
@@ -161,4 +162,47 @@ def kdeplot(data=None, x=None, hue=None, meanline=False,
                         color=colors[i], fontsize=14, ha='center')
 
     # 출력
+    show(save_path=save_path)
+
+
+
+
+def hisplot(data=None, x=None, bins=None, hue=None,
+            title=None, xlabel=None, ylabel=None,
+            linewidth=1, palette=None, kde=False,
+            width=1280, height=640, save_path=None):
+    """
+    히스토그램을 그린다.
+
+    Args:
+        data: 시각화할 데이터
+        x: 히스토그램 대상 컬럼명
+        bins: 구간 수 또는 경계
+        hue: 범주 컬럼명
+        title: 그래프 제목
+        xlabel: x축 레이블
+        ylabel: y축 레이블
+        linewidth: 선 굵기
+        palette: 색상 팔레트 이름
+        kde: 커널 밀도 그래프 겹쳐 그릴지 여부
+        width: 캔버스 가로 픽셀
+        height: 캔버스 세로 픽셀
+        save_path: 이미지 저장 경로
+    """
+    # 그래프 초기화
+    fig, ax = init(width=width, height=height, title=title, xlabel=xlabel, ylabel=ylabel)
+
+    # 구간 산정
+    if isinstance(bins, int):
+        hist, bins = np.histogram(data[x], bins=bins)
+        bins = np.round(bins, 1)
+        ax.set_xticks(bins, bins)
+    elif isinstance(bins, (list, np.ndarray)):
+        ax.set_xticks(bins, bins)
+
+    # 히스토그램 그리기
+    sb.histplot(data=data, x=x, hue=hue, linewidth=linewidth,
+                palette=palette, kde=kde, bins=bins)
+
+    # 그래프 표시
     show(save_path=save_path)
