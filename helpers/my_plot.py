@@ -167,7 +167,7 @@ def kdeplot(data=None, x=None, hue=None, meanline=False,
 
 
 
-def hisplot(data=None, x=None, bins=None, hue=None,
+def histplot(data=None, x=None, bins=None, hue=None,
             title=None, xlabel=None, ylabel=None,
             linewidth=1, palette=None, kde=False,
             width=1280, height=640, save_path=None):
@@ -203,6 +203,76 @@ def hisplot(data=None, x=None, bins=None, hue=None,
     # 히스토그램 그리기
     sb.histplot(data=data, x=x, hue=hue, linewidth=linewidth,
                 palette=palette, kde=kde, bins=bins)
+
+    # 그래프 표시
+    show(save_path=save_path)
+
+
+
+
+
+def _resolve_hue(cat_axis, hue=None, palette=None):
+    """
+    범주형 그래프(boxplot, violinplot, barplot, countplot)의 hue 관련 인자를 결정한다.
+
+    범주축을 기준으로 다음 두 경우를 처리한다.
+        - hue 없이 palette만 지정: 범주축을 hue로 삼아 범주별 색상을 적용
+        - hue가 범주축과 동일(중복): 외부에서 hue=x 로 호출된 경우
+    두 경우 모두 hue가 범주축과 같으므로, 그래프가 쪼개지지(dodge) 않게 끄고 범례도 숨긴다.
+
+    Args:
+        cat_axis: 범주축 컬럼명 (세로형이면 x, 가로형이면 y)
+        hue: 범주 구분 컬럼명
+        palette: 색상 팔레트 이름
+
+    Returns:
+        - hue: seaborn에 전달할 hue 값
+        - dodge: seaborn에 전달할 dodge 값
+        - legend: seaborn에 전달할 legend 값
+    """
+    if hue is None and palette is not None:
+        return cat_axis, False, False
+
+    if hue is not None and hue == cat_axis:
+        return hue, False, False
+
+    return hue, "auto", "auto"
+
+
+
+
+
+def boxplot(data=None, x=None, y=None, hue=None, orient=None, palette=None,
+            order=None, title=None, xlabel=None, ylabel=None,
+            width=1280, height=640, save_path=None):
+    """
+    상자그림(boxplot)을 그린다.
+
+    Args:
+        data: 시각화할 데이터
+        x: x축 범주 컬럼명
+        y: y축 값 컬럼명
+        hue: 범주 구분 컬럼명
+        orient: 상자그림 방향 (None, 'v' 또는 'h')
+        palette: 색상 팔레트 이름
+        order: 상자그림 순서를 의미하는 연속형 자료형
+        title: 그래프 제목
+        xlabel: x축 레이블
+        ylabel: y축 레이블
+        width: 캔버스 가로 픽셀
+        height: 캔버스 세로 픽셀
+        save_path: 이미지 저장 경로
+    """
+    # 그래프 초기화
+    fig, ax = init(width=width, height=height, title=title, xlabel=xlabel, ylabel=ylabel)
+
+    # 범주축과 hue가 겹치는 경우 상자가 쪼개지지(dodge) 않도록 처리
+    hue, dodge, legend = _resolve_hue(x if orient !="h" else y,
+                                      hue=hue, palette=palette)
+
+    # 상자그림 그리기
+    sb.boxplot(data=data, x=x, y=y, hue=hue, orient=orient,
+               palette=palette, order=order, dodge=dodge, legend=legend)
 
     # 그래프 표시
     show(save_path=save_path)
