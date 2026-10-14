@@ -276,3 +276,158 @@ def boxplot(data=None, x=None, y=None, hue=None, orient=None, palette=None,
 
     # 그래프 표시
     show(save_path=save_path)
+
+
+
+
+
+def violinplot(data=None, x=None, y=None, hue=None, orient=None,
+               palette=None, title=None, xlabel=None, ylabel=None,
+               width=1280, height=640, save_path=None):
+    """
+    바이올린 플롯(ViolinPlot)을 그린다.
+
+    Args:
+        data: 시각화할 데이터
+        x: x축 범주 컬럼명
+        y: y축 값 컬럼명
+        hue: 범주 구분 컬럼명
+        orient: 바이올린 플롯 방향 (None, 'v' 또는 'h')
+        palette: 색상 팔레트 이름
+        title: 그래프 제목
+        xlabel: x축 레이블
+        ylabel: y축 레이블
+        width: 캔버스 가로 픽셀
+        height: 캔버스 세로 픽셀
+        save_path: 이미지 저장 경로
+    """
+    # 그래프 초기화
+    fig, ax = init(width=width, height=height, title=title, xlabel=xlabel,
+                   ylabel=ylabel)
+
+    # 범주축과 hue가 겹치는 경우 상자가 쪼개지지(dodge) 않도록 처리
+    hue, dodge, legend = _resolve_hue(x if orient !="h" else y,
+                                      hue=hue, palette=palette)
+
+    # 바이올린 플롯 그리기
+    sb.violinplot(data=data, x=x, y=y, hue=hue, orient=orient,
+               palette=palette, dodge=dodge, legend=legend)
+
+    # 그래프 표시
+    show(save_path=save_path)
+
+
+
+
+
+def heatmap(data=None, annot=True, fmt="0.2f", linewidth=0.5,
+            palette=None, title=None, xlabel=None, ylabel=None,
+            width=1280, height=640, save_path=None):
+    """
+    히트맵을 그린다.
+
+    Args:
+        data: 시각화할 데이터 (2차원 배열 또는 DataFrame)
+        annot: 셀에 값 표시 여부
+        fmt: 셀에 표시할 값의 형식
+        linwidth: 셀 간격 선 두께
+        palette: 색상 팔레트 이름
+        title: 그래프 제목
+        xlabel: x축 레이블
+        ylabel: y축 레이블
+        width: 캔버스 가로 픽셀
+        height: 캔버스 세로 픽셀
+        save_path: 이미지 저장 경로
+    """
+    # 그래프 초기화
+    fig, ax = init(width=width, height=height, title=title, xlabel=xlabel,
+                   ylabel=ylabel)
+
+    # 그리드 제거
+    ax.grid(False)
+
+    # 히트맵 그리기
+    sb.heatmap(data=data, annot=annot, fmt=fmt, linewidth=linewidth,
+               cmap=palette)
+
+    # 그래프 표시
+    show(save_path=save_path)
+
+
+
+
+
+def barplot(data=None, x=None, y=None, hue=None, estimator=np.mean,
+            order=None, palette=None, title=None, xlabel=None, ylabel=None,
+            width=1280, height=640, save_path=None):
+    """
+    막대그래프를 그린다.
+
+    Args:
+        data: 시각화할 데이터 (2차원 배열 또는 DataFrame)
+        x: x축 범주 컬럼명
+        y: y축 값 컬럼명
+        hue: 범주 구분 컬럼명
+        estimator: 막대 높이 계산 함수 (기본값: np.mean)
+        order: 정렬순서를 의미하는 연속형 자료형
+        palette: 색상 팔레트 이름
+        title: 그래프 제목
+        xlabel: x축 레이블
+        ylabel: y축 레이블
+        width: 캔버스 가로 픽셀
+        height: 캔버스 세로 픽셀
+        save_path: 이미지 저장 경로
+    """
+    # 그래프 초기화
+    fig, ax = init(width=width, height=height,
+                   title=title, xlabel=xlabel, ylabel=ylabel)
+
+    # 범주축과 hue가 겹치는 경우 상자가 쪼개지지(dodge) 않도록 처리
+    hue, dodge, legend = _resolve_hue(x if x is not None else y, hue=hue,
+                                      palette=palette)
+
+    # 막대그래프 그리기
+    sb.barplot(data=data, x=x, y=y, hue=hue, estimator=estimator,
+               order=order, palette=palette, dodge=dodge, legend=legend)
+
+    # 그래프 표시
+    show(save_path=save_path)
+
+
+
+
+
+def countplot(data=None, x=None, y=None, hue=None, order=None,
+              palette=None, title=None, xlabel=None, ylabel=None,
+              width=1280, height=640, save_path=None):
+    """
+    막대그래프를 그린다.
+
+    Args:
+        data: 시각화할 데이터 (2차원 배열 또는 DataFrame)
+        x: x축 범주 컬럼명
+        y: y축 값 컬럼명
+        hue: 범주 구분 컬럼명
+        order: 정렬순서를 의미하는 연속형 자료형
+        palette: 색상 팔레트 이름
+        title: 그래프 제목
+        xlabel: x축 레이블
+        ylabel: y축 레이블
+        width: 캔버스 가로 픽셀
+        height: 캔버스 세로 픽셀
+        save_path: 이미지 저장 경로
+    """
+    # 그래프 초기화
+    fig, ax = init(width=width, height=height,
+                   title=title, xlabel=xlabel, ylabel=ylabel)
+
+    # 범주축과 hue가 겹치는 경우 상자가 쪼개지지(dodge) 않도록 처리
+    hue, dodge, legend = _resolve_hue(x if x is not None else y, hue=hue,
+                                      palette=palette)
+
+    # 빈도 그래프 그리기
+    sb.countplot(data=data, x=x, y=y, hue=hue, order=order,
+                 palette=palette, dodge=dodge, legend=legend)
+
+    # 그래프 표시
+    show(save_path=save_path)
