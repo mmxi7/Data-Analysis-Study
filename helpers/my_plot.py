@@ -615,7 +615,7 @@ def stackplot(data, x, y, hue, aggfunc=np.sum, orient='v', ratio=False,
         if color_list is not None:
             color = color_list[i]
 
-        if orient == 'y':
+        if orient == 'v':
             ax.bar(df.index, df[col], bottom=df.iloc[:, :i].sum(axis=1), color=color,
                    label=col)
         else:
