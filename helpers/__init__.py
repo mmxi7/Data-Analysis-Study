@@ -7,8 +7,9 @@ from pathlib import Path
 # ------------------------------------
 # 내보낼 모듈 임포트
 # ------------------------------------
-from . import my_qtcheck
-from . import my_plot
+from . import my_qtcheck    # 데이터 품질 점검 관련 함수 모듈
+from . import my_plot       # 시각화 관련 함수 모듈
+from . import my_stats      # 통계 분석 관련 함수 모듈
 
 # ------------------------------------
 # 한글 폰트 설정

@@ -4,6 +4,8 @@ import numpy as np
 from pandas import pivot_table
 from scipy.spatial import ConvexHull
 
+from . import my_stats
+
 # -----------------------------------------------------------
 # 그래프 초기화 수행 함수 정의하기(2-1)
 def init(width=1280, height=640, rows=1, cols=1,
@@ -117,7 +119,7 @@ def lineplot(data=None, x=None, y=None, hue=None,
         show(save_path=save_path)
 
     # 다변량 커널밀도 그래프 모듈화
-def kdeplot(data=None, x=None, hue=None, meanline=False,
+def kdeplot(data=None, x=None, hue=None, meanline=False, clevel=0,
              title=None, xlabel=None, ylabel=None,
              fill=False, linewidth=2.0, palette=None,
              width=1280, height=640, save_path=None,
@@ -145,9 +147,31 @@ def kdeplot(data=None, x=None, hue=None, meanline=False,
     if ax is None:
         fig, ax = init(width=width, height=height, title=title, xlabel=xlabel, ylabel=ylabel)
 
-    # 다변량 커널 밀도 그래프 그리기
+    # 단변량 커널 밀도 그래프 그리기
     sb.kdeplot(data=data, x=x, hue=hue, fill= fill, linewidth=linewidth,
                palette=palette, ax=ax, **params)
+
+    # 신뢰구간 표시 (신뢰수준이 0이 아닌 경우에만)
+    if clevel:
+        ymin, ymax = ax.get_ylim()      # 그래프의 y축 범위 조회
+
+        if hue is None:
+            # 그래프에 적용된 팔레트의 첫번째 색상을 따른다 (팔레트가 없으면 기본 파란색)
+            color = sb.color_palette(palette)[0] if palette else '#0066ff'
+            # 전체 데이터에 대한 신뢰구간 표시
+            _draw_ci(ax, my_stats.ci(data, columns=x, clevel=clevel), color, ymax)
+        else:
+            # hue 범주별로 신뢰구간 표시 (kdeplot이 그린 라인의 색상과 일치시킴)
+            categories = list(data[hue].unique())
+            # 팔레트에서 범주의 수에 맞는 색상값 추출
+            colors = sb.color_palette(palette, n_colors=len(categories))
+
+            # 각 범주에 대해 신뢰구간 표시
+            for i, cat in enumerate(categories):
+                cdata = data.loc[data[hue] == cat, x]
+                _draw_ci(ax, my_stats.ci(cdata, clevel=clevel), colors[i], ymax)
+
+        ax.set_ylim(ymin, ymax)     # y축 범위 유지
 
     # 평균선 표시
     if meanline:
@@ -169,11 +193,36 @@ def kdeplot(data=None, x=None, hue=None, meanline=False,
             for i, cat in enumerate(categories):
                 mv = data.loc[data[hue] == cat,x].mean()
                 ax.axvline(x=mv, color=colors[i], linestyle='--', linewidth=linewidth * 0.5)
-                # ax.text(x=mv + 0.05, y=y_max * (0.95 - i * 0.07), s=f'{cat} Mean: {mv:.2f}',
-                #        color=colors[i], fontsize=14, ha='center')
+                ax.text(x=mv + 0.05, y=y_max * (0.95 - i * 0.07), s=f'{cat} Mean: {mv:.2f}',
+                        color=colors[i], fontsize=14, ha='center')
     # 그래프 표시
     if fig is not None:
         show(save_path=save_path)
+
+
+def _draw_ci(ax, interval, color, ymax):
+    """
+    kdeplot에서 단일 신뢰구간(하한~상한)을 지정한 색상으로 그리는 보조 함수
+
+    Args:
+        ax: 그래프를 그릴 Axes 객체.
+        interval: (신뢰구간 하한, 신뢰구간 상한) 튜플.
+        color: 신뢰구간 선/텍스트/영역에 적용할 색상.
+        ymax: 영역 채우기와 텍스트 위치 계산에 사용할 y축 상한.
+    """
+    cmin, cmax = interval
+
+    # 신뢰구간 범위에 대한 세로 직선 그리기 (cmin ~ cmax)
+    ax.axvline(cmin, linestyle=':', color=color, linewidth=0.5)
+    ax.axvline(cmax, linestyle=':', color=color, linewidth=0.5)
+
+    # 신뢰구간 범위에 대한 텍스트 추가
+    ax.text(cmin, ymax * 0.9, f'{cmin:.2f}', color=color, fontsize=11, ha='right')
+    ax.text(cmax, ymax * 0.9, f'{cmin:.2f}', color=color, fontsize=11, ha='left')
+
+    # 신뢰구간 범위에 대한 영역 채우기 (cmin ~ cmax)
+    ax.fill_between([cmin, cmax], 0, ymax, alpha=0.1, color=color)
+
 
 # 히스토그램 모듈화
 def histplot(data=None, x=None, bins="auto", hue=None,
