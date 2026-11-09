@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OGRVRTDataSource>
+    <OGRVRTLayer name="서울시_응급실_위치정보_geocoder-Sheet1">
+        <SrcDataSource relativeToVRT="1">서울시_응급실_위치정보_geocoder.xlsx</SrcDataSource>
+        <!--Header=False-->
+        <SrcLayer>Sheet1</SrcLayer>
+        <Field name="기관ID" src="기관ID" type="String"/>
+        <Field name="기관명" src="기관명" type="String"/>
+        <Field name="주소" src="주소" type="String"/>
+        <Field name="병원분류" src="병원분류" type="String"/>
+        <Field name="응급의료기관코드" src="응급의료기관코드" type="String"/>
+        <Field name="응급의료기관코드명" src="응급의료기관코드명" type="String"/>
+        <Field name="대표전화" src="대표전화" type="String"/>
+        <Field name="응급실전화" src="응급실전화" type="String"/>
+        <GeometryType>wkbPoint</GeometryType>
+        <LayerSRS>EPSG:4326</LayerSRS>
+        <GeometryField encoding="PointFromColumns" x="longitude" y="latitude"/>
+    </OGRVRTLayer>
+</OGRVRTDataSource>

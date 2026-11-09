@@ -4,37 +4,36 @@ import numpy as np
 from pandas import pivot_table
 from scipy.spatial import ConvexHull
 
-# ----------------------------------------------------------
-
+# -----------------------------------------------------------
+# 그래프 초기화 수행 함수 정의하기(2-1)
 def init(width=1280, height=640, rows=1, cols=1,
-         title=None, xlabel=None, ylabel=None, grid=True, twinx=False):
+          title=None, xlabel=None, ylabel=None, grid=True, twinx=False):
     """
     그래프의 크기와 dpi를 설정하여 fig와 ax 객체를 반환하는 함수
-
+    
     Parameters:
         - width: 그래프의 가로 크기 (픽셀 단위)
         - height: 그래프의 세로 크기 (픽셀 단위)
         - rows: 그래프의 행 수
         - cols: 그래프의 열 수
-        - title: 그래프의 제목 (기본값: None)
-        - xlabel: x축 레이블 (기본값: None)
-        - ylabel: y축 레이블 (기본값: None)
+        - title: 그래프의 제목 (기본값:None)
+        - xlabel: x축의 레이블 (기본값:None)
         - grid: 그래프에 그리드를 표시할지 여부 (기본값: True)
-
+        
     Returns:
         - fig: 생성된 Figure 객체
-        - ax: 생성된 Axes 객체 또는 Axes 배열
-    """
-    my_figsize = ((width / 100) * cols, (height / 100) * rows)
-    fig, ax = plt.subplots(rows, cols, figsize=my_figsize, dpi=200)
-
+        - ax: 생성된 Axes rorcp Ehsms Axes 배열
+        """
+    # 그래프 초기화 수행 함수 정의하기(2-2)
+    my_figsize = (width / 100, height / 100)
+    fig, ax = plt.subplots(rows, cols, figsize=my_figsize)
     if rows > 1 or cols > 1:
-        ax = ax.flatten()       # 2차원 배열을 1차원으로 평탄화하여 반복 처리
+        ax = ax.flatten()       # 2차원 배열을 1차원으로 평탄화하여 반복처리
         fig.suptitle(title, fontsize=32, fontweight=500)
         for a in ax:
             a.grid(grid, alpha=0.5)
-
-    else:
+    
+    else: 
         ax.grid(grid, alpha=0.5)
 
         if title:
@@ -42,126 +41,117 @@ def init(width=1280, height=640, rows=1, cols=1,
 
         if xlabel:
             ax.set_xlabel(xlabel, fontsize=16, fontweight=400, labelpad=5)
-
         if ylabel:
             ax.set_ylabel(ylabel, fontsize=16, fontweight=400, labelpad=5)
 
-    if twinx:                   # 멀티축 지원 여부가 True로 전달될 경우 멀티축을 생성해 튜플로 묶어서 리턴
+    if twinx:
         ax_right = ax.twinx()
         ax = (ax, ax_right)
-
+        
     return fig, ax
 
-# ----------------------------------------------------------
-
+# 그래프 출력 함수 정의하기
 def show(save_path=None):
     """
-    그래프를 화면에 표시하는 함수
-
-    Parameters:
+    그래프를 화면에 표시하는 점수
+    
+    Parmeters:
         - grid: 그리드를 표시할지 여부 (기본값: True)
-        - save_path: 그래프를 저장할 파일 경로, None이면 저장하지 않음
+        - save_path: 그래프를 저장할 파일 경로. None이면 저장하지 않음.
     """
     if save_path:
         plt.savefig(save_path)
-        
+
     plt.tight_layout()
     plt.show()
     plt.close()
 
-
-# ----------------------------------------------------------
-
-
+# 시계열 그래프 모듈화(1/3)
 def lineplot(data=None, x=None, y=None, hue=None,
              title=None, xlabel=None, ylabel=None,
-             color=None, linewidth=None, linestyle="-", palette=None,
+             color=None, linewidth=2.0, linestyle="-", palette=None,
              marker=None, markersize=None, markeredgewidth=None,
              markeredgecolor=None, markerfacecolor=None,
-             width=1280, height=640, save_path=None,
-             ax=None, **params):
+             width=1280, height=640, save_path=None, ax=None, **params):
     """
     선 그래프를 그린다.
-
+    
     Args:
-        data: 시각화할 데이터
-        x: x축 컬럼명 혹은 x축 값 시퀀스
-        y: y축 컬럼명 혹은 y축 값 시퀀스
-        hue: 범주 구분 컬럼명
-        title: 그래프 제목
-        xlabel: x축 레이블
-        ylabel: y축 레이블
-        color: 선 색상
-        linewidth: 선 굵기
-        linestyle: 선 스타일
-        palette: 색상 팔레트 이름
-        marker: 마커 모양
-        markersize: 마커 크기
-        markeredgewidth: 마커 테두리 두께
-        markeredgecolor: 마커 테두리 색상
-        markerfacecolor: 마커 배경 색상
-        width: 캔버스 가로 픽셀
-        height: 캔버스 세로 픽셀
-        save_path: 이미지 저장 경로        
+        data: 시각화할 데이터.
+        x: x축 컬럼명 혹은 x축 값 시퀀스.
+        y: y축 컬럼명 혹은 y축 값 시퀀스.
+        hue: 범주 구분 컬럼명.
+        title: 그래프 제목.
+        xlabel: x축 레이블.
+        ylabel: y축 레이블.
+        color: 선 색상.
+        linewidth: 선 굵기.
+        linestyle: 선 스타일.
+        palette: 색상 팔레트 이름.
+        marker: 마커 모양.
+        markersize: 마커 크기.
+        markeredgewidth: 마커 테두리 두께.
+        markeredgecolor: 마커 테두리 색상.
+        markerfacecolor: 마커 배경 색상.
+        width: 캔버스 가로 픽셀.
+        height: 캔버스 세로 픽셀.
+        save_path: 이미지 저장 경로
     """
 
     # 그래프 초기화
     fig = None
     if ax is None:
-        fig, ax = init(width=width, height=height, title=title, xlabel=xlabel, ylabel=ylabel)
+        fig, ax = init(width=width, height=height, title=title, xlabel=xlabel,
+         ylabel=ylabel)
 
     # 선 그래프 그리기
     sb.lineplot(data=data, x=x, y=y, hue=hue,
-             color=color, linewidth=linewidth, linestyle=linestyle,
-             palette=palette, marker=marker, markersize=markersize,
-             markeredgewidth=markeredgewidth,
-             markeredgecolor=markeredgecolor,
-             markerfacecolor=markerfacecolor,
-             ax=ax, **params)
+                color=color, linewidth=linewidth, linestyle=linestyle,
+                palette=palette, marker=marker, markersize= markersize,
+                markeredgewidth=markeredgewidth,
+                markeredgecolor=markeredgecolor,
+                markerfacecolor=markerfacecolor, ax=ax, **params)
 
     # 그래프 표시
     if fig is not None:
         show(save_path=save_path)
 
-
-# ----------------------------------------------------------
-
-
+    # 다변량 커널밀도 그래프 모듈화
 def kdeplot(data=None, x=None, hue=None, meanline=False,
-            title=None, xlabel=None, ylabel=None,
-            fill=False, linewidth=2.0, palette=None,
-            width=1280, height=640, save_path=None,
-            ax=None, **params):
-
+             title=None, xlabel=None, ylabel=None,
+             fill=False, linewidth=2.0, palette=None,
+             width=1280, height=640, save_path=None,
+             ax=None, **params):
     """
-    단변량 커널 밀도 그래프를 그린다. 평균선은 hue가 설정된 경우 지원하지 않는다.
-
+    선 그래플르 그린다.
+    
     Args:
-        data: 시각화할 데이터
-        x: x축 컬럼명 혹은 x축 값 시퀀스
-        hue: 범주형 변수 이름 (기본값 None)
-        meanline: 평균선 표시 여부
-        title: 그래프 제목
-        xlabel: x축 레이블
-        ylabel: y축 레이블
+        data: 시각화할 데이터.
+        x: x축 컬럼명 혹은 x축 값 시퀀스.
+        hue: 범주 구분 컬럼명.
+        meanline: 평균선 표시 여부.
+        title: 그래프 제목.
+        xlabel: x축 레이블.
+        ylabel: y축 레이블.
         fill: 면적 채우기 여부
-        linewidth: 선 굵기
-        palette: 색상 팔레트 이름
-        width: 캔버스 가로 픽셀
-        height: 캔버스 세로 픽셀
-        save_path: 이미지 저장 경로 
+        linewidth: 선 굵기.
+        palette: 색상 팔레트 이름.
+        width: 캔버스 가로 픽셀.
+        height: 캔버스 세로 픽셀.
+        save_path: 이미지 저장 경로
     """
     # 그래프 초기화
     fig = None
     if ax is None:
         fig, ax = init(width=width, height=height, title=title, xlabel=xlabel, ylabel=ylabel)
 
-    # 단변량 커널 밀도 그래프 그리기
-    sb.kdeplot(data=data, x=x, hue=hue, fill=fill, linewidth=linewidth, palette=palette, ax=ax, **params)
+    # 다변량 커널 밀도 그래프 그리기
+    sb.kdeplot(data=data, x=x, hue=hue, fill= fill, linewidth=linewidth,
+               palette=palette, ax=ax, **params)
 
     # 평균선 표시
     if meanline:
-        y_max = ax.get_ylim()[1]
+        y_max =  ax.get_ylim()[1]
 
         if hue is None:
             mv = data[x].mean()
@@ -169,49 +159,46 @@ def kdeplot(data=None, x=None, hue=None, meanline=False,
             ax.text(x=mv + 0.05, y=y_max * 0.95, s=f'Mean: {mv:.2f}', color='red', fontsize=14,
                     ha='center')
         else:
-            # hue 범주별 평균선 표시 (kdeplot이 그린 라인의 색상과 일치시킴)
-            categories = list(data[hue].unique())
-            # 팔레트에서 범주의 수에 맞는 색상값 추출
+            # hue 범주별 평균선 표시 (kdeplot이 그린 라인의 색상과 일치시킴
+            hue_order = params.get('hue_order')
+            categories = list(hue_order) if hue_order is not None else list(data[hue].unique())
+            # 팔레트에서 범주의 수에 맞는 색상값  추출
             colors = sb.color_palette(palette, n_colors=len(categories))
 
             # 각 범주에 대해 평균선 표시
             for i, cat in enumerate(categories):
-                mv = data.loc[data[hue] == cat, x].mean()
+                mv = data.loc[data[hue] == cat,x].mean()
                 ax.axvline(x=mv, color=colors[i], linestyle='--', linewidth=linewidth * 0.5)
-                ax.text(x=mv + 0.05, y=y_max * (0.95 - i * 0.07), s=f'{cat} Mean: {mv:.2f}',
-                        color=colors[i], fontsize=14, ha='center')
-
+                # ax.text(x=mv + 0.05, y=y_max * (0.95 - i * 0.07), s=f'{cat} Mean: {mv:.2f}',
+                #        color=colors[i], fontsize=14, ha='center')
     # 그래프 표시
     if fig is not None:
         show(save_path=save_path)
 
-
-# ----------------------------------------------------------
-
-
-def histplot(data=None, x=None, bins=None, hue=None,
-            title=None, xlabel=None, ylabel=None,
-            linewidth=1, palette=None, kde=False,
-            width=1280, height=640, save_path=None,
-            ax=None, **params):
+# 히스토그램 모듈화
+def histplot(data=None, x=None, bins="auto", hue=None,
+             title=None, xlabel=None, ylabel=None,
+             linewidth=1, palette=None, kde=False,
+             width=1280, height=640, save_path=None,
+             ax=None, **params):
     """
-    히스토그램을 그린다.
-
+    선 그래프를 그린다.
+    
     Args:
-        data: 시각화할 데이터
-        x: 히스토그램 대상 컬럼명
-        bins: 구간 수 또는 경계
-        hue: 범주 컬럼명
-        title: 그래프 제목
-        xlabel: x축 레이블
-        ylabel: y축 레이블
-        linewidth: 선 굵기
-        palette: 색상 팔레트 이름
-        kde: 커널 밀도 그래프 겹쳐 그릴지 여부
-        width: 캔버스 가로 픽셀
-        height: 캔버스 세로 픽셀
+        data: 시각화할 데이터.
+        x: x축 컬럼명 혹은 x축 값 시퀀스.
+        bins: 구간 수 또는 경계.
+        hue: 범주 구분 컬럼명.
+        title: 그래프 제목.
+        xlabel: x축 레이블.
+        ylabel: y축 레이블.
+        linewidth: 선 굵기.
+        palette: 색상 팔레트 이름.
+        width: 캔버스 가로 픽셀.
+        height: 캔버스 세로 픽셀.
         save_path: 이미지 저장 경로
     """
+
     # 그래프 초기화
     fig = None
     if ax is None:
@@ -226,33 +213,32 @@ def histplot(data=None, x=None, bins=None, hue=None,
         ax.set_xticks(bins, bins)
 
     # 히스토그램 그리기
-    sb.histplot(data=data, x=x, hue=hue, linewidth=linewidth, palette=palette, kde=kde, bins=bins, ax=ax, **params)
+    sb.histplot(data=data, x=x, hue=hue, linewidth=linewidth,
+                palette=palette, kde=kde, bins=bins, ax=ax, **params)
 
-    # 그래프 표시
+    # 그래프_ 표시
     if fig is not None:
         show(save_path=save_path)
 
 
-# ----------------------------------------------------------
-
-
+# 범주 자동 구분 함수 정의
 def _resolve_hue(cat_axis, hue=None, palette=None):
     """
     범주형 그래프(boxplot, violinplot, barplot, countplot)의 hue 관련 인자를 결정한다.
-
+    
     범주축을 기준으로 다음 두 경우를 처리한다.
-        - hue 없이 palette만 지정: 범주축을 hue로 삼아 범주별 색상을 적용
+        - hue없이 palette만 지정: 범주축을 hue로 삼아 범주별 색상을 적용
         - hue가 범주축과 동일(중복): 외부에서 hue=x 로 호출된 경우
     두 경우 모두 hue가 범주축과 같으므로, 그래프가 쪼개지지(dodge) 않게 끄고 범례도 숨긴다.
-
+    
     Args:
-        cat_axis: 범주축 컬럼명 (세로형이면 x, 가로형이면 y)
-        hue: 범주 구분 컬럼명
-        palette: 색상 팔레트 이름
-
+        cat_axis: 범주축 컬럼명 (세로형이면 x, 가로형이면 y).
+        hue: 범주 구분 컬럼명.
+        palette: 색상 팔레트 이름.
+        
     Returns:
         - hue: seaborn에 전달할 hue 값
-        - dodge: seaborn에 전달할 dodge 값
+        - dodge: seaborn에 전달할 dodge값
         - legend: seaborn에 전달할 legend 값
     """
     if hue is None and palette is not None:
@@ -263,30 +249,25 @@ def _resolve_hue(cat_axis, hue=None, palette=None):
 
     return hue, "auto", "auto"
 
-
-# ----------------------------------------------------------
-
-
+# 상자그림 모듈화
 def boxplot(data=None, x=None, y=None, hue=None, orient=None, palette=None,
-            order=None, title=None, xlabel=None, ylabel=None,
-            width=1280, height=640, save_path=None,
-            ax=None, **params):
+             order=None, title=None, xlabel=None, ylabel=None,
+             width=1280, height=640, save_path=None,
+             ax=None, **params):
     """
     상자그림(boxplot)을 그린다.
-
     Args:
-        data: 시각화할 데이터
-        x: x축 범주 컬럼명
+        data: 시각화할 데이터.
+        x: x축 범주 컬럼명.
         y: y축 값 컬럼명
-        hue: 범주 구분 컬럼명
-        orient: 상자그림 방향 (None, 'v' 또는 'h')
-        palette: 색상 팔레트 이름
-        order: 상자그림 순서를 의미하는 연속형 자료형
-        title: 그래프 제목
-        xlabel: x축 레이블
-        ylabel: y축 레이블
-        width: 캔버스 가로 픽셀
-        height: 캔버스 세로 픽셀
+        hue: 범주 구분 컬럼명.
+        orient: 상자그림 방향 (None, 'v' 또는 'h').
+        palette: 색상 팔레트 이름.
+        title: 그래프 제목.
+        xlabel: x축 레이블.
+        ylabel: y축 레이블.
+        width: 캔버스 가로 픽셀.
+        height: 캔버스 세로 픽셀.
         save_path: 이미지 저장 경로
     """
     # 그래프 초기화
@@ -295,7 +276,7 @@ def boxplot(data=None, x=None, y=None, hue=None, orient=None, palette=None,
         fig, ax = init(width=width, height=height, title=title, xlabel=xlabel, ylabel=ylabel)
 
     # 범주축과 hue가 겹치는 경우 상자가 쪼개지지(dodge) 않도록 처리
-    hue, dodge, legend = _resolve_hue(x if orient !="h" else y,
+    hue, dodge, legend = _resolve_hue(x if orient != "h" else y,
                                       hue=hue, palette=palette)
 
     # 상자그림 그리기
@@ -308,78 +289,72 @@ def boxplot(data=None, x=None, y=None, hue=None, orient=None, palette=None,
         show(save_path=save_path)
 
 
-# ----------------------------------------------------------
-
-
-def violinplot(data=None, x=None, y=None, hue=None, orient=None,
-               palette=None, title=None, xlabel=None, ylabel=None,
-               width=1280, height=640, save_path=None,
-               ax=None, **params):
-    """
+# ViolinPlot 모듈화
+# 주석 설정 부분
+def violinplot(data=None, x=None, y=None, hue=None, orient=None, palette=None,
+             title=None, xlabel=None, ylabel=None,
+             width=1280, height=640, save_path=None,
+             ax=None, **params):
+    """ 
     바이올린 플롯(ViolinPlot)을 그린다.
-
+    
     Args:
-        data: 시각화할 데이터
-        x: x축 범주 컬럼명
+        data: 시각화할 데이터.
+        x: x축 범주 컬럼명.
         y: y축 값 컬럼명
-        hue: 범주 구분 컬럼명
-        orient: 바이올린 플롯 방향 (None, 'v' 또는 'h')
-        palette: 색상 팔레트 이름
-        title: 그래프 제목
-        xlabel: x축 레이블
-        ylabel: y축 레이블
-        width: 캔버스 가로 픽셀
-        height: 캔버스 세로 픽셀
+        hue: 범주 구분 컬럼명.
+        orient: 상자그림 방향 (None, 'v' 또는 'h').
+        palette: 색상 팔레트 이름.
+        title: 그래프 제목.
+        xlabel: x축 레이블.
+        ylabel: y축 레이블.
+        width: 캔버스 가로 픽셀.
+        height: 캔버스 세로 픽셀.
         save_path: 이미지 저장 경로
     """
+
     # 그래프 초기화
     fig = None
     if ax is None:
-        fig, ax = init(width=width, height=height, title=title, xlabel=xlabel,
-                   ylabel=ylabel)
+        fig, ax = init(width=width, height=height, title=title, xlabel=xlabel, ylabel=ylabel)
 
-    # 범주축과 hue가 겹치는 경우 상자가 쪼개지지(dodge) 않도록 처리
-    hue, dodge, legend = _resolve_hue(x if orient !="h" else y,
-                                      hue=hue, palette=palette)
+    # 범주축과 hue가 겹치는 경우 막대가 쪼개지지(dodge) 않도록 처리
+    hue, dodge, legend = _resolve_hue(x if orient != "h" else y, hue=hue,
+                                      palette=palette)
 
     # 바이올린 플롯 그리기
     sb.violinplot(data=data, x=x, y=y, hue=hue, orient=orient,
-               palette=palette, dodge=dodge, legend=legend,
-               ax=ax, **params)
+                   palette=palette, dodge=dodge, legend=legend, ax=ax, **params)
 
     # 그래프 표시
     if fig is not None:
         show(save_path=save_path)
 
 
-# ----------------------------------------------------------
-
-
+# 히트맵 모듈화
 def heatmap(data=None, annot=True, fmt="0.2f", linewidth=0.5,
             palette=None, title=None, xlabel=None, ylabel=None,
-            width=1280, height=640, save_path=None,
-            ax=None, **params):
-    """
+            width=1280, height=640, save_path=None, ax=None, **params):
+    """ 
     히트맵을 그린다.
-
+        
     Args:
-        data: 시각화할 데이터 (2차원 배열 또는 DataFrame)
-        annot: 셀에 값 표시 여부
-        fmt: 셀에 표시할 값의 형식
-        linwidth: 셀 간격 선 두께
-        palette: 색상 팔레트 이름
-        title: 그래프 제목
-        xlabel: x축 레이블
-        ylabel: y축 레이블
-        width: 캔버스 가로 픽셀
-        height: 캔버스 세로 픽셀
+        data: 시각화할 데이터.
+        annot: 셀에 값 표시 여부.
+        fmt: 셀에 표시할 값의 형식.
+        linewidth: 셀 간격 선 두께.
+        palette: 색상 팔레트 이름.
+        title: 그래프 제목.
+        xlabel: x축 레이블.
+        ylabel: y축 레이블.
+        width: 캔버스 가로 픽셀.
+        height: 캔버스 세로 픽셀.
         save_path: 이미지 저장 경로
     """
     # 그래프 초기화
     fig = None
     if ax is None:
-        fig, ax = init(width=width, height=height, title=title, xlabel=xlabel,
-                   ylabel=ylabel)
+        fig, ax = init(width=width, height=height, title=title, xlabel=xlabel, ylabel=ylabel)
 
     # 그리드 제거
     ax.grid(False)
@@ -392,58 +367,55 @@ def heatmap(data=None, annot=True, fmt="0.2f", linewidth=0.5,
     if fig is not None:
         show(save_path=save_path)
 
-
-# ----------------------------------------------------------
-
-
+# Barplot의 모듈화
 def barplot(data=None, x=None, y=None, hue=None, estimator=np.mean,
             order=None, palette=None, title=None, xlabel=None, ylabel=None,
-            width=1280, height=640, save_path=None,
-            ax=None, **params):
-    """
+            width=1280, height=640, save_path=None, text=False, ax=None, **params):
+    """ 
     막대그래프를 그린다.
-
+        
     Args:
-        data: 시각화할 데이터 (2차원 배열 또는 DataFrame)
-        x: x축 범주 컬럼명
+        data: 시각화할 데이터.
+        x: x축 범주 컬럼명.
         y: y축 값 컬럼명
-        hue: 범주 구분 컬럼명
-        estimator: 막대 높이 계산 함수 (기본값: np.mean)
+        hue: 범주 구분 컬럼명.
+        estimator: 막대 높이 계산 함수 (기본값: np.mean).
         order: 정렬순서를 의미하는 연속형 자료형
-        palette: 색상 팔레트 이름
-        title: 그래프 제목
-        xlabel: x축 레이블
-        ylabel: y축 레이블
-        width: 캔버스 가로 픽셀
-        height: 캔버스 세로 픽셀
+        palette: 색상 팔레트 이름.
+        title: 그래프 제목.
+        xlabel: x축 레이블.
+        ylabel: y축 레이블.
+        width: 캔버스 가로 픽셀.
+        height: 캔버스 세로 픽셀.
         save_path: 이미지 저장 경로
     """
+
     # 그래프 초기화
     fig = None
     if ax is None:
-        fig, ax = init(width=width, height=height,
-                   title=title, xlabel=xlabel, ylabel=ylabel)
+        fig, ax = init(width=width, height=height, title=title, xlabel=xlabel, ylabel=ylabel)
 
-    # 범주축과 hue가 겹치는 경우 상자가 쪼개지지(dodge) 않도록 처리
+    # 범주축과 hue가 겹치는 경우 막대가 쪼개지지(dudge) 않도록 처리
     hue, dodge, legend = _resolve_hue(x if x is not None else y, hue=hue,
-                                      palette=palette)
+                                          palette=palette)
 
     # 막대그래프 그리기
     sb.barplot(data=data, x=x, y=y, hue=hue, estimator=estimator,
-               order=order, palette=palette, dodge=dodge, legend=legend,
-               ax=ax, **params)
+               order=order, palette=palette, dodge=dodge, legend=legend, ax=ax, **params)
+
+    # 막대그래프에 숫자 표시
+    if text is True:
+        for g in ax.containers:
+            ax.bar_label(g, fmt='%.0f', padding=3)
 
     # 그래프 표시
     if fig is not None:
         show(save_path=save_path)
 
-
-# ----------------------------------------------------------
-
-
+# Countplot 모듈화
 def countplot(data=None, x=None, y=None, hue=None, order=None,
               palette=None, title=None, xlabel=None, ylabel=None,
-              width=1280, height=640, save_path=None,
+              width=1280, height=640, save_path=None, text=False,
               ax=None, **params):
     """
     막대그래프를 그린다.
@@ -461,6 +433,7 @@ def countplot(data=None, x=None, y=None, hue=None, order=None,
         width: 캔버스 가로 픽셀
         height: 캔버스 세로 픽셀
         save_path: 이미지 저장 경로
+        text: 각 막대그래프에 합계 수를 표시
     """
     # 그래프 초기화
     fig = None
@@ -477,47 +450,47 @@ def countplot(data=None, x=None, y=None, hue=None, order=None,
                  palette=palette, dodge=dodge, legend=legend,
                  ax=ax, **params)
 
+    # 막대그래프에 숫자 표시
+    if text is True:
+        for g in ax.containers:
+            ax.bar_label(g, fmt='%.0f', padding=3)
+
     # 그래프 표시
     if fig is not None:
         show(save_path=save_path)
 
-
-# ----------------------------------------------------------
-
-
-def pieplot(x, labels, autopct='%.1f%%', startangle=90, counterclock=False,
-            explode=None, donutchart=False,
-            wedge_width=0.7, wedge_color='#ffffff', wedge_linewidth=3,
+# 파이 그래프 모듈화
+def pieplot(x, labels, autopct="%0.1f%%", startangle=90, counterclock=False, 
+            explode=None, donutchart=False, 
+            wedge_width=0.7, wedge_color="#ffffff", wedge_linewidth=3,
             palette=None, title=None, xlabel=None, ylabel=None,
-            width=1280, height=640, save_path=None,
-            ax=None, **params):
-    """
-    파이 그래프 혹은 도넛 그래프를 그린다.
-
+              width=1280, height=640, save_path=None, ax=None, **params):
+    """ 
+    파이 그래프 혹은 도넛 그래프를 그린다        
     Args:
-        x: x축 범주 컬럼명
-        labels: 파이 조각에 대한 라벨
+        x: x축 범주 컬럼명.
+        labels: 파이 조각에 대한 라벨.
         autopct: 퍼센트 표시 형식
         startangle: 시작 각도
         counterclock: 시계 반대 방향으로 그릴지 여부
-        explode: 조각 간격
-        donutchart: 도넛 차트 여부
-        wedge_width: 도넛 차트일 때 조각 너비 비율
-        wedge_color: 도넛 차트일 때 조각 사이 경계선 색상
-        wedge_linewidth: 도넛 차트일 때 조각 사이 경계선 굵기
-        palette: 색상 팔레트 이름
-        title: 그래프 제목
-        xlabel: x축 레이블
-        ylabel: y축 레이블
-        width: 캔버스 가로 픽셀
-        height: 캔버스 세로 픽셀
+        explode= 조각 간격.
+        donutchart: 도넛 차트 여부.
+        wedge_width: 도넛 차트일 때 조각 너비 비율.
+        wedge_color: 도넛 차트일 때 조각 사이 경계선 색상.
+        wedge_linewidth: 도넛 차트일 때 조각 사이 경계선 긁기
+        palette: 색상 팔레트 이름.
+        title: 그래프 제목.
+        xlabel: x축 레이블.
+        ylabel: y축 레이블.
+        width: 캔버스 가로 픽셀.
+        height: 캔버스 세로 픽셀.
         save_path: 이미지 저장 경로
     """
+
     # 그래프 초기화
     fig = None
     if ax is None:
-        fig, ax = init(width=width, height=height, title=title,
-                   xlabel=xlabel, ylabel=ylabel)
+        fig, ax = init(width=width, height=height, title=title, xlabel=xlabel, ylabel=ylabel)
 
     # 색상값을 팔레트로부터 추출
     color_list = None
@@ -527,7 +500,8 @@ def pieplot(x, labels, autopct='%.1f%%', startangle=90, counterclock=False,
     # 도넛 그래프 그리기 옵션 생성
     wedgeprops = None
     if donutchart:
-        wedgeprops={'width': wedge_width, 'edgecolor': wedge_color, 'linewidth': wedge_linewidth}
+        wedgeprops={"width": wedge_width, "edgecolor": wedge_color,
+                    "linewidth": wedge_linewidth}
 
     # 파이 그래프 그리기
     ax.pie(x, labels=labels, autopct=autopct, startangle=startangle,
@@ -538,69 +512,68 @@ def pieplot(x, labels, autopct='%.1f%%', startangle=90, counterclock=False,
     if fig is not None:
         show(save_path=save_path)
 
-
-# ----------------------------------------------------------
-
-
+# 누적 막대 그래프 모듈화
 def stackplot(data, x, y, hue, aggfunc=np.sum, orient='v', ratio=False,
-              text=True, text_color="#ffffff", text_fontsize=12,
-              text_format=None,
+              text=True, text_color='#ffffff', text_fontsize=12,
+              text_format=None, order=None,
               palette=None, title=None, xlabel=None, ylabel=None,
-              width=1280, height=640, save_path=None,
-              ax=None, **params):
-    """
-    누적 막대 그래프를 그린다.
+              width=1280, height=640, save_path=None, ax=None, **params):
 
+    """ 
+    누적 막대 그래프를 그린다             
     Args:
-        data: 시각화할 데이터
-        x: x축 범주 컬럼명
+        data: 시각화할 데이터.
+        x: x축 범주 컬럼명.
         y: y축 값 컬럼명
-        hue: 범주 구분 컬럼명
-        aggfunc: 누적할 값 계산 함수 (기본값: np.sum)
-        orient: 막대 방향 ('v' 또는 'h')
-        ratio: 누적값을 비율로 표시할지 여부
-        text: 누적값 텍스트 표시 여부
-        text_color: 누적값 텍스트 색상
-        text_fontsize: 누적값 텍스트 폰트 크기
+        hue: 범주 구분 컬럼명.
+        aggfunc: 누적할 값 계산 함수 (기본값: np.sum).
+        orient: 막대 방향 ('v' 또는 'h').
+        ratio: 누적값을 비율로 표시할지 여부.
+        text: 누적값 텍스트 표시 여부.
+        text_color: 누적값 텍스트 표시 여부.
+        text_fontsize: 누적값 텍스트 폰트 크기.
         text_format: 누적값 텍스트 포맷
-        palette: 색상 팔레트 이름
-        title: 그래프 제목
-        xlabel: x축 레이블
-        ylabel: y축 레이블
-        width: 캔버스 가로 픽셀
-        height: 캔버스 세로 픽셀
+        palette: 색상 팔레트 이름.
+        title: 그래프 제목.
+        xlabel: x축 레이블.
+        ylabel: y축 레이블.
+        width: 캔버스 가로 픽셀.
+        height: 캔버스 세로 픽셀.
         save_path: 이미지 저장 경로
-    """
+    """   
     # 그래프 초기화
     fig = None
     if ax is None:
-        fig, ax = init(width=width, height=height, title=title,
-                   xlabel=xlabel, ylabel=ylabel)
+        fig, ax = init(width=width, height=height, title=title, xlabel=xlabel, ylabel=ylabel)
 
-    # 데이터 피버팅
+    # 데이터 피벗팅(fill_value = 0 -> 결측치를 0으로 채움) 후 인덱스를 문자열 카테고리로 변환 
     df = pivot_table(data=data, index=x, values=y, columns=hue, aggfunc=aggfunc,
                      fill_value=0, observed=True)
+    # 지정한 순서대로 인덱스 정렬
+    if order is not None:
+        df = df.reindex(index=order, fill_value=0)
+
     df.index = df.index.astype("str").astype("category")
 
-    # 누적값을 비율로 변환하는 경우
+    # 누적값을 비율로 반환하는 경우
     if ratio:
-        if text_format is None:         # 텍스트 포맷이 없다면 강제 지정
+        if text_format is None:                 # 텍스트 포멧이 없다면 강제 지정
             text_format = "{:.1f}%"
 
-        df['sum'] = df.sum(axis=1)      # 각 행의 합을 계산해 'sum'열에 저장
+        df['sum'] = df.sum(axis=1)              # 각 행의 합 계산하여 'sum'열에 저장
 
-        for col in df.columns:          # 각 열에 대해 누적값을 비율로 변환
-            df[col] = df[col] / df['sum'] * 100
+        for col in df.columns:                  # 각 열에 대한 누적값을 비율로 변환
+            df[col] = df[col] / df['sum'] * 100 
 
-        df.drop('sum', axis=1, inplace=True)    # 'sum' 열 제거
+        df.drop(columns='sum', inplace=True)    # 'sum' 열 제거
 
-        if orient == 'v':               # 그래프 방향에 따라 축 범위 설정
+        if orient == 'v':
             ax.set_ylim(0, 100)
         else:
-            ax.set_xlim(0, 100)
+            ax.set_xlim(0,100)
 
     else:
-        if text_format is None:         # 텍스트 포맷이 없다면 강제 지정
+        if text_format is None:         # 텍스트 포멧 강제 지정
             text_format = "{:.1f}"
 
     # 색상값 생성하기
@@ -608,31 +581,31 @@ def stackplot(data, x, y, hue, aggfunc=np.sum, orient='v', ratio=False,
     if palette is not None:
         color_list = sb.color_palette(palette, n_colors=len(df.columns))
 
-    # 피벗테이블의 각 열에 대해 누적 막대그래프 그리기
+    # 피벗 테이블의 각 열에 대한 누적 막대그래프 그리기
     for i, col in enumerate(df.columns):
-        color = None
+        color=None
 
         if color_list is not None:
             color = color_list[i]
-
+        # 세로그래프
         if orient == 'v':
-            ax.bar(df.index, df[col], bottom=df.iloc[:, :i].sum(axis=1), color=color,
+            ax.bar(df.index, df[col], bottom=df.iloc[:, :i].sum(axis=1), color=color, 
                    label=col)
+        # 가로 그래프
         else:
             ax.barh(df.index, df[col], left=df.iloc[:, :i].sum(axis=1), color=color,
-                   label=col)
+                    label=col)
 
-    # 누적값 텍스트 표시
+        # 누적 값 텍스트 표시
         if text:
             for j, val in enumerate(df[col]):
-                if val == 0: # 누적값이 0인 경우 텍스트 표시하지 않음
+                if val == 0: # 누적값이 0인 경우 텍스트 표시하지 않음.
                     continue
 
                 if orient == 'v':
-                    ax.text(x=j, y=df.iloc[j, :i].sum() + val / 2,
-                            s=text_format.format(val), ha='center', va='center',
+                    ax.text(x=j, y=df.iloc[j, :i].sum() + val/2,
+                            s = text_format.format(val), ha='center', va='center',
                             color=text_color, fontsize=text_fontsize)
-
                 else:
                     ax.text(x=df.iloc[j, :i].sum() + val / 2, y=j,
                             s=text_format.format(val), ha='center', va='center',
@@ -645,57 +618,55 @@ def stackplot(data, x, y, hue, aggfunc=np.sum, orient='v', ratio=False,
     if fig is not None:
         show(save_path=save_path)
 
+# 산점도 그래프 모듈화
+def scatterplot(data, x, y, hue=None, marker='o', color=None, size=100, 
+              edgecolor='#ffffff', linewidth=1.5, alpha=1, palette=None, 
+              title=None, xlabel=None, ylabel=None, outline=True,
+              width=1280, height=640, save_path=None, ax=None, **params):
 
-# ----------------------------------------------------------
-
-
-def scatterplot(data, x, y, hue=None, marker='o', color=None, size=100,
-                edgecolor="#ffffff", linewidth=1.5, alpha=1, palette=None,
-                title=None, xlabel=None, ylabel=None,
-                width=1280, height=640, outline=True,
-                save_path=None, ax=None, **params):
-    """
+    """ 
     산점도를 그린다.
 
     Args:
-        data: 시각화할 데이터
-        x: x축 범주 컬럼명
+        data: 시각화할 데이터.
+        x: x축 범주 컬럼명.
         y: y축 값 컬럼명
-        hue: 범주 구분 컬럼명
-        marker: 마커 모양 (기본값: "o")
-        size: 마커 크기 (기본값: 100)
+        hue: 범주 구분 컬럼명.
+        marker: 마커 모양 (기본갑 'o')
+        color: 마커 색상 (hue가 None일 때 적용)
+        size: 마커 크기(기본값:100)
         edgecolor: 마커 테두리 색상 (기본값: "#ffffff")
-        linewidth: 마커 테두리 두께 (기본값: 1.5)
-        alpha: 마커 투명도 (0~1, 기본값: 1)
-        palette: 색상 팔레트 이름
-        title: 그래프 제목
-        xlabel: x축 레이블
-        ylabel: y축 레이블
-        width: 캔버스 가로 픽셀
-        height: 캔버스 세로 픽셀
-        outline: ConvexHull로 외곽선을 그릴지 여부, hue가 지정되었을 때만 작동 (기본값:True)
+        linewidth: 마커 테두리 두께 (기본값: 1.5).
+        alpha: 마커 투명도(0~1, 기본값: 1).
+        palette: 색상 팔레트 이름.
+        title: 그래프 제목.
+        xlabel: x축 레이블.
+        ylabel: y축 레이블.
+        width: 캔버스 가로 픽셀.
+        height: 캔버스 세로 픽셀.
+        outline: ConvexHull로 외각선 그릴지 여부. hue가 지정되었을 때만 작동(기본값: True).
         save_path: 이미지 저장 경로
-    """
+        ax: 그래프를 그릴 Axes 객체. None이면 init 함수로 새로 생성.
+    """  
+
     # 그래프 초기화
     fig = None
     if ax is None:
-        fig, ax = init(width=width, height=height, title=title,
-                   xlabel=xlabel, ylabel=ylabel)
+        fig, ax = init(width=width, height=height, title=title, xlabel=xlabel, ylabel=ylabel)
 
     # 산점도 그리기
-    sb.scatterplot(data=data, x=x, y=y,     
-                   hue=hue,                 # 군집을 구분할 분류값이 있는 컬럼명
-                   color=color,             # 마커 색상
-                   palette=palette,         # 색상 팔레트 설정
-                   marker=marker,           # 마커 모양
-                   s=size,                  # 마커 크기 (기본값=100)
-                   edgecolor=edgecolor,     # 마커 테두리 색상
-                   linewidth=linewidth,     # 마커 테두리 두께
-                   alpha=alpha,             # 마커 투명도
-                   ax=ax,                   # 그래프를 그릴 Axes 객체
-                   **params)
-
-    # 외곽선 그리기
+    sb.scatterplot(data=data, x=x, y=y,
+               hue=hue,                 # 군집을 구분할 분류값이 있는 컬럼명
+               color=color,             # 마커 색상
+               palette=palette,         # 색상 팔레트 설정
+               marker=marker,              # 마커 모양
+               s=size,                  # 마커 크기(기본값 100)
+               edgecolor=edgecolor,     # 마커 테두리 색상
+               linewidth=linewidth,     # 마커 테두리 두께
+               alpha=alpha,             # 마커 투명도 
+               ax=ax,                   # 그래프를 그릴 Axes 객체
+               **params)
+    # 외각선 그리기
     if outline and hue is not None:
         plot_hull(data=data, x=x, y=y, hue=hue, palette=palette, ax=ax)
 
@@ -703,88 +674,82 @@ def scatterplot(data, x, y, hue=None, marker='o', color=None, size=100,
     if fig is not None:
         show(save_path=save_path)
 
-
-# ----------------------------------------------------------
-
-
+# 외각선 생성 함수 정의
 def plot_hull(data, x, y, hue, palette, ax):
+    """ 
+    ConvexHull을 이용하여 각 군집의 외각선을 그리는 함수            
+        Args:
+            data: 시각화할 데이터.
+            x: x축 범주 컬럼명.
+            y: y축 값 컬럼명
+            hue: 범주 구분 컬럼명.
+            palette: 색상 팔레티 으림.
+            ax: ConvexHull로 외각선을 그릴 Axes 객체.
     """
-    ConvexHull을 이용하여 각 군집의 외곽선을 그리는 함수
 
-    Args:
-        data: 시각화할 데이터
-        x: x축 범주 컬럼명
-        y: y축 값 컬럼명
-        hue: 범주 구분 컬럼명
-        palette: 색상 팔레트 이름
-        ax: Convexhull로 외곽선을 그릴 Axes 객체
-    """
-    # 데이터의 군집 종류 얻기
+    # 데이터 군집 종류 얻기
     classes = sorted(list(data[hue].unique()))
-    
+
     # 각 클래스에 대하여 반복 수행
     for i, v in enumerate(classes):
         # 현재 클래스에 해당하는 데이터 포인트 추출
         df_c = data.loc[data[hue] == v, [x, y]]
-    
-        # ConvexHull은 3개 이상의 점이 필요하므로 데이터 포인트가 3개 미만인 경우 중단해야 함
+
+        # ConvexHull은 3개 이상의 점이 필요하므로, 데이터 포인트가 3개 미만인 경우 중단해야 함
         if len(df_c) < 3:
             continue
-    
+
         hull = ConvexHull(df_c)
         points = np.append(hull.vertices, hull.vertices[0])
-    
-        # 현재 클래스에 적용될 색상값 생성
+
+        # 현재 클래스에 적용도리 색상값 생성
         color = sb.color_palette(palette)[i]
-    
+
         # points를 index로 하는 데이터 포인트를 선과 면으로 표시
         ax.plot(df_c.iloc[points, 0], df_c.iloc[points, 1], linewidth=1, linestyle=":", color=color)
         ax.fill(df_c.iloc[points, 0], df_c.iloc[points, 1], alpha=0.1, color=color)
 
-
-# ----------------------------------------------------------
-
-
-def lmplot(data, x, y, hue=None, palette=None, col=None, row=None, markers='o',
-           scatter_edgecolor="#ffffff", scatter_linewidths=1, scatter_size=50,
-           scatter_alpha=0.8, linestyle="-", linecolor=None, linewidth=2,
-           title=None, xlabel=None, ylabel=None, width=1280, height=640,
-           save_path=None, **params):
-    """
-    seaborn lmplot으로 산점도 그래프와 회귀선을 시각화한다.
+# Lmplot 함수 정의
+def Lmplot(data, x, y, hue=None, palette=None, col= None, row=None, markers='o', 
+            scatter_edgecolor='#ffffff', scatter_linewidths=1.5, scatter_size=50,
+            scatter_alpha=0.8, linestyle="-", linecolor=None, linewidth= 2, 
+            title=None, xlabel=None, ylabel=None, width=1280, height=640, 
+            save_path=None, **params):    
+    
+    """ 
+    seaborn limplot으로 산점도 그래프와 회귀선을 시각화한다.
 
     Args:
-        data (DataFrame): 시각화할 데이터
-        x (str): 독립변수 컬럼
-        y (str): 종속변수 컬럼
-        hue (str|None): 범주 컬럼
-        palette (str|None): 팔레트 이름
-        col (str|None): 열 패싯 컬럼
-        row (str|None): 행 패싯 컬럼
-        markers (str|list[str]): 산점도 점 모양
-        scatter_edgecolor (str|None): 산점도 점 외곽선 색상
-        scatter_linewidths (float): 산점도 점 외곽선 굵기
-        scatter_size (int): 산점도 점 크기
-        scatter_alpha (float): 산점도 점 투명도
-        linestyle (str): 회귀선 스타일
-        linecolor (str|None): 회귀선 색상
-        linewidth (float): 회귀선 굵기
-        title (str|None): 그래프 제목
-        xlabel (str|None): x축 레이블
-        ylabel (str|None): y축 레이블
-        width (int): 캔버스 가로 픽셀
-        height (int): 캔버스 세로 픽셀
-        save_path (str|None): 이미지 저장 경로, None이면 화면에 표시
-    
-        Returns:
-            None
-    """
-    # 1) 그래프 초기화
-    w = width / 100      # 그래프 가로 크기
-    h = height / 100     # 그래프 세로 크기
-    my_dpi = 200         # 해상도 설정
+        data(DataFrame): 시각화할 데이터.
+        x (str): x축 범주 컬럼명.
+        y (str): y축 값 컬럼명
+        hue (str|None): 범주 구분 컬럼명.
+        palette (str|None): 색상 팔레트 이름.
+        col (str|None): 열 패싯 컬럼.
+        row (str|None): 행 패싯 컬럼.
+        markers (str|list[str]): 산점도 점 모양.
+        scatter_edgecolor (str|None): 산점도 외곽선 색상.
+        scatter_linewidths (float): 산점도 외곽선 굵기.
+        scatter_size (int): 산점도 점 크기.
+        scatter_alpha (float): 산점도 점 투명도.
+        linestyle (str): 회귀선 스타일.
+        linecolor (str|None): 회귀선 색상.
+        linewidth (float): 회귀선 굵기.
+        title (str|None): 그래프 제목.
+        xlabel (str|None): x축 레이블.
+        ylabel (str|None): y축 레이블.
+        width (int): 캔버스 가로 픽셀.
+        height (int): 캔버스 세로 픽셀.
+        save_path (str|None): 이미지 저장 경로
 
-    # hue가 지정되지 않았는데 palette와 linecolor가 지정된 경우 무의미하므로 None으로 설정
+    Returns: None
+    """  
+    # 1) 그래프 초기화
+    w = width / 100 # 가로 크기
+    h = height / 100 # 세로 크기
+    my_dpi = 200 # 해상도 설정
+
+    # hue가 설정되지 않았는데 palette와 linecolor가 지정된 경우, 무의미하므로 None으로 설정
     if not hue and palette:
         palette = None
         linecolor = None
@@ -794,14 +759,14 @@ def lmplot(data, x, y, hue=None, palette=None, col=None, row=None, markers='o',
                   legend=False, markers=markers, palette=palette,
                   scatter_kws={
                       "edgecolor": scatter_edgecolor, "linewidths": scatter_linewidths,
-                      "s": scatter_size, "alpha": scatter_alpha
-                      },
+                      "s": scatter_size, "alpha": scatter_alpha 
+                  },
                   line_kws={
                       "linestyle": linestyle, "color": linecolor,
                       "linewidth": linewidth
-                      },
-                      **params
-        )
+                  },
+                  **params
+    )
 
     # 3) 그래프 설정 및 표시
     g.fig.set_dpi(my_dpi)
@@ -810,69 +775,71 @@ def lmplot(data, x, y, hue=None, palette=None, col=None, row=None, markers='o',
     if title:
         g.fig.suptitle(title, fontsize=24, fontweight=500, y=1)
 
-    for x in g.axes.flatten():      # 멀티 그래프라면 그래프를 탐색하면서 반복
-        x.grid(True, alpha=0.5)     # 개별 그래프에 격자
-        x.set_axisbelow(True)       # 격자를 그래프 뒤로 이동
+    for x in g.axes.flatten():                  # 멀티 그래프라면 그래프를 탐색하면서 반복
+        x.grid(True, alpha=0.5) # 개별 그래프에 격자
+        x.set_axisbelow(True)                   # 격자를 그래프 뒤로 이동
 
         # x, y 레이블이 지정되었다면 개별 그래프에 적용
         if xlabel: x.set_xlabel(xlabel, fontsize=16, fontweight=400, labelpad=5)
         if ylabel: x.set_ylabel(ylabel, fontsize=16, fontweight=400, labelpad=5)
 
-        if hue is not None:         # hue가 지정되었다면 범례 제목을 개별 그래프에 적용
-            x.legend(bbox_to_anchor=(1, 1), loc='upper left')   # 범례 위치 조정
+        if hue is not None:             # hue가 지정되었다면 범례 제목을 개별 그래프에 적용
+            x.legend(bbox_to_anchor=(1, 1), loc='upper left') # 범례 위치 조정
 
     show(save_path=save_path)
 
-
-# ----------------------------------------------------------
-
-
+# 함수 원형 정의
 def pairplot(data, x=None, y=None, hue=None, palette=None, diag_kind="kde", reg=False,
-             markers="o", scatter_size=20, scatter_alpha=0.8,
-             linecolor=None, linewidth=1.5, linestyle="-",
-             title=None, width=1280, height=640, save_path=None, **params):
-    """
+             markers='o', scatter_size=20, scatter_alpha=0.8, linestyle="-", linecolor=None, linewidth= 1.5, 
+            title=None, width=1280, height=640, save_path=None, **params):    
+    
+    """ 
     산점도 행렬 시각화
 
     Args:
-        data (DataFrame): 시각화할 데이터
-        x (str|list[str]|None): 대상 컬럼명 혹은 컬럼명 리스트
-        y (str|list[str]|None): 대상 컬럼명 혹은 컬럼명 리스트
-        hue (str|None): 범주 컬럼명
+        data(DataFrame): 시각화할 데이터.
+        x (str): 대상 컬럼명 혹은 컬럼명 리스트
+        y (str): 대상 컬럼명 혹은 컬럼명 리스트
+        hue (str|None): 범주 구분 컬럼명.
+        palette (str|None): 색상 팔레트 이름.
         diag_kind (str): 대각선에 표시할 그래프 종류. 'hist' 또는 'kde'.
         reg (bool): 회귀선 표시 여부
-        markers (str|list[str]): 산점도 점 모양
-        scatter_size (int): 산점도 점 크기
-        scatter_alpha (float): 산점도 점 투명도
-        linecolor (str|None): 회귀선 색상
-        linewidth (float): 회귀선 굵기
-        linestyle (str): 회귀선 스타일
-        title (str|None): 그래프 제목
-        width (int): 캔버스 가로 픽셀
-        height (int): 캔버스 세로 픽셀
-        save_path (str|None): 이미지 저장 경로, None이면 화면에 표시
-    """
-    # 1) 그래프 초기화
-    figsize = (width / 100, height / 100)
+        markers (str|list[str]): 산점도 점 모양.
+        scatter_size (int): 산점도 점 크기.
+        scatter_alpha (float): 산점도 점 투명도.
+        linestyle (str): 회귀선 스타일.
+        linecolor (str|None): 회귀선 색상.
+        linewidth (float): 회귀선 굵기.
+        title (str|None): 그래프 제목.
+        xlabel (str|None): x축 레이블.
+        ylabel (str|None): y축 레이블.
+        width (int): 캔버스 가로 픽셀.
+        height (int): 캔버스 세로 픽셀.
+        save_path (str|None): 이미지 저장 경로
+    """  
 
-    # hue가 지정되지 않았는데 palette와 linecolor가 지정된 경우 무의미하므로 None으로 설정
+    # 1) 그래프 초기화
+    figsize = (width / 100, height /100)
+
+    # hue가 지정되지 않았는데 palette와 linecolor가 지정된 경우, 무의미하므로 None으로 설정
     if not hue and palette:
         palette = None
 
     # 회귀선의 표시 여부에 따라서 plot_kws 분기
     if reg:
-        plot_kws = {"scatter_kws": {"s": scatter_size, "alpha": scatter_alpha},
-                    "line_kws": {"color": linecolor, "linewidth": linewidth,
-                                 "linestyle": linestyle}
-                    }
+        plot_kws = {
+            "scatter_kws": { "s": scatter_size, "alpha": scatter_alpha},
+            "line_kws": { "color": linecolor, "linewidth": linewidth,
+                         "linestyle": linestyle}
+        }
     else:
-        plot_kws = {"s": scatter_size, "alpha": scatter_alpha}
+        plot_kws = { "s": scatter_size, "alpha": scatter_alpha}
 
     # 2) pairplot 그리기
     g = sb.pairplot(data=data, hue=hue, markers=markers, palette=palette,
-                    kind='reg' if reg else "scatter",
+                    kind="reg" if reg else "scatter",
                     diag_kind=diag_kind, plot_kws=plot_kws, **params)
-
+    
     g.fig.set_dpi(200)
     g.fig.set_figwidth(figsize[0])
     g.fig.set_figheight(figsize[1])
@@ -881,8 +848,8 @@ def pairplot(data, x=None, y=None, hue=None, palette=None, diag_kind="kde", reg=
         g.fig.suptitle(title, fontsize=24, fontweight='bold')
 
     # 3) 개별 그래프 설정 및 화면 출력
-    for ax in g.axes.flatten():
-        ax.set_axisbelow(True)      # 격자를 그래프 뒤로 이동
-        ax.grid(True, alpha=0.5)    # 격자 추가
+    for x in g.axes.flatten():                  # 멀티 그래프라면 그래프를 탐색하면서 반복
+        x.set_axisbelow(True)                   # 격자를 그래프 뒤로 이동
+        x.grid(True, alpha=0.5)                 # 격자 추가
 
-    show(save_path=save_path)
+    show(save_path) # 화면 출력
