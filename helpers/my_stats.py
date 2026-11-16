@@ -1,8 +1,16 @@
+import numpy as np
 from math import sqrt
-from pandas import DataFrame
+from pandas import DataFrame, Series, melt, concat
 from scipy.stats import t
 from scipy.stats import normaltest, bartlett, levene
-from scipy.stats import ttest_1samp, wilcoxon
+from scipy.stats import ttest_1samp, wilcoxon, ttest_rel, ttest_ind, mannwhitneyu
+
+from statannotations.Annotator import Annotator
+
+from pingouin import anova, welch_anova
+
+from . import my_plot
+from . import my_prep
 
 def ci(data, columns=None, clevel=0.95):
     """
@@ -52,7 +60,7 @@ def test_assumptions(data, columns=None, alpha=0.05, center="median"):
     """
     # 검정에 사용할 컬럼 결정 (지정하지 않으면 수치형 컬럼 전체 사용)
     if columns is None:
-        columns = data.select_astype(include="number").columns.tolist()
+        columns = data.select_dtypes(include="number").columns.tolist()
 
     # 하나의 컬럼명이 문자열로 전달된 경우 리스트로 감싸준다
     if type(columns) == str:
@@ -163,3 +171,274 @@ def test_1sample(data, column, popmean=0, alpha=0.05):
 
     # 세 방향 결과를 표로 정리하여 반환
     return DataFrame(rows).set_index(["test", "alternative"])
+
+
+
+
+
+def test_paired(data, before, after, alpha=0.05,
+                plot=True, palette=None, title=None, xlabel=None, ylabel=None,
+                width=1280, height=640, save_path=None):
+    """
+    짝지어진 두 측정값(전/후)의 차이가 있는지 검정하는 함수 (wide 형식)
+
+    차이값 d = after - before 의 정규성 충족 시 대응표본 t검정,
+    미충족 시 Wilcoxon 부호순위 검정을 수행하여,
+    양측, 좌측단측, 우측단측 세 가지 대립가설을 일괄 검정한다.
+
+    Args:
+        data (DataFrame): 검정 대상 데이터프레임
+        before (str): 사전 측정값 컬럼명
+        after (str): 사후 측정값 컬럼명
+        alpha (float): 유의수준 (기본값: 0.05)
+        plot (bool): 결과를 시각화할지 여부 (기본값: True)
+        palette (str or list, optional): 색상 팔레트
+        title (str, optional): 그래프 제목
+        xlabel (str, optional): x축 라벨
+        ylabel (str, optional): y축 라벨
+        width (int, optional): 그래프 가로 크기
+        height (int, optional): 그래프 세로 크기
+        save_path (str, optional): 그래프 저장 경로
+
+    Returns:
+        DataFrame: 대립가설(alternative)별 검정, 통계량, p-value, 유의성 결과표
+    """
+
+    # 같은 행끼리 짝지어야 하므로 두 컬럼을 함께 결측 행 제거
+    paired = data[[before, after]].dropna()
+
+    # 차이값 d = after - before 를 계산
+    d = (paired[after] - paired[before]).rename("diff")
+
+    # test_assumptions로 차이값의 정규성만 검정 (단일 컬럼)
+    report = test_assumptions(DataFrame({"diff": d}), columns=["diff"], alpha=alpha)
+
+    # 차이값의 정규성 충족 여부
+    is_normal = bool(report.loc["diff", "result"])
+
+    # 정규성 충족 여부에 따라 적용할 검정 이름 결정
+    test_name = "Paired t-test" if is_normal else "Wilcoxon signed-rank test"
+
+    # 대립가설 방향별 가설을 부등식으로 표현 (H0: 귀무가설, H1: 대립가설)
+    hypotheses = {
+        "two-sided": {"H0": f"{after} = {before}", "H1": f"{after} ≠ {before}"},
+        "less":      {"H0": f"{after} ≥ {before}", "H1": f"{after} < {before}"},
+        "greater":   {"H0": f"{after} ≤ {before}", "H1": f"{after} > {before}"},
+    }
+
+    rows = []
+    # 양측, 좌측단측, 우측단측을 일괄 검정 (항상 after, before 순)
+    for alt in ("two-sided", "less", "greater"):
+        if is_normal:       # 정규성 충족 -> 대응표본 t검정
+            stat, p = ttest_rel(paired[after], paired[before], alternative=alt)
+        else:
+            stat, p = wilcoxon(paired[after], paired[before], alternative=alt)
+
+        significant = p < alpha     # p < alpha 이면 통계적으로 유의 (귀무가설 기각)
+
+        rows.append({
+            "test": test_name,
+            "alternative": alt,
+            "statistic": round(float(stat), 4),
+            "p-value": round(float(p), 4),
+            "significant": significant,
+            # 유의하면 대립가설(H1) 채택, 아니면 귀무가설(H0) 유지
+            "result": hypotheses[alt]["H1"] if significant else hypotheses[alt]["H0"],
+        })
+
+    # 세 방향 결과를 표로 정리하여 반환 --> 함수 맨 마지막에 return문 필요
+    result_df = DataFrame(rows).set_index(["test", "alternative"])
+
+    # 시각화 옵션이 True인 경우, 시각화 수행
+    if plot:
+        melt_df = melt(paired, value_vars=[before, after], var_name="group", value_name="value")
+
+        fig, ax = my_plot.init(title=title, width=width, height=height, xlabel=xlabel, ylabel=ylabel)
+        my_plot.boxplot(data=melt_df, x="group", y="value", hue="group", palette=palette, ax=ax)
+
+        # 대응표본 T검정 결과를 시각화에 추가
+        annotator = Annotator(data=melt_df,                 # 데이터프레임
+                              x='group',                    # x축 변수
+                              y='value',                    # y축 변수
+                              pairs=[(before, after)],      # 비교할 그룹 쌍
+                              ax=ax)                        # 그래프 축
+
+        # 가설검정 알고리즘 종류
+        annotator.configure(test="t-test_paired" if is_normal else 'Wilcoxon')
+        annotator.apply_and_annotate()
+        my_plot.show()
+
+    return result_df
+
+
+
+
+
+def test_independent(data, group1, group2, alpha=0.05, plot=True, palette=None,
+                     title=None, xlabel=None, ylabel=None, width=1280, height=640, save_path=None):
+    """
+    독립된 두 집단의 평균이 같은지 검정하는 함수
+
+    두 집단 모두 정규성 충족 시 등분산성에 따라 Student/Welch t검정,
+    하나라도 미충족 시 Mann-Whitney U 검정을 수행하며,
+    양측·좌측단측·우측단측 세 가지 대립가설을 일괄 검정한다.
+
+    Args:
+        data (DataFrame): 검정 대상 데이터프레임
+        group1 (str): 첫 번째 집단의 측정값 컬럼명
+        group2 (str): 두 번째 집단의 측정값 컬럼명
+        alpha (float): 유의수준 (기본값: 0.05)
+        plot (bool): 결과를 시각화할지 여부 (기본값: True)
+        palette (str or list): 색상 팔레트 (기본값: None)
+        title (str): 그래프 제목 (기본값: None)
+        xlabel (str): x축 라벨 (기본값: None)
+        ylabel (str): y축 라벨 (기본값: None)
+        width (int): 그래프 너비 (기본값: 1280)
+        height (int): 그래프 높이 (기본값: 640)
+        save_path (str): 그래프 저장 경로 (기본값: None)
+
+    Returns:
+        DataFrame: 대립가설(alternative)별 검정·통계량·p-value·유의성 결과
+    """
+
+    # 두 집단의 컬럼명을 수준(level)으로 사용
+    lv = [group1, group2]
+
+    # 각 집단 컬럼을 분리하고 결측 제거 (독립표본이므로 컬럼별로 따로 제거)
+    a = data[group1].dropna()
+    b = data[group2].dropna()
+
+    # 두 집단을 컬럼으로 묶어 정규성+등분산성을 동시에 검정 (길이가 달라도 무방)
+    paired = concat([a.reset_index(drop=True), b.reset_index(drop=True)], axis=1)
+    paired.columns = [str(lv[0]), str(lv[1])]
+    report = test_assumptions(paired, columns=list(paired.columns), alpha=alpha)
+
+    # 두 집단 모두 정규성을 충족하는지 확인
+    group1_normal = bool(report.loc[str(lv[0]), "result"])
+    group2_normal = bool(report.loc[str(lv[1]), "result"])
+    both_normal = group1_normal and group2_normal
+
+    # 등분산성 충족 여부 추출
+    equal_var = bool(report[report["test"] == "equal_var"]["result"].iloc[0])
+
+    # 가정 검정 결과에 따라 적용할 검정 이름 결정
+    if not both_normal:
+        test_name = "Mann-Whitney U test"       # 정규성 미충족 -> 비모수 검정
+    elif equal_var:
+        test_name = "Student t-test"            # 정규성 충족 + 등분산
+    else:
+        test_name = "Welch t-test"              # 정규성 충족 + 이분산
+
+    # 대립가설 방향별 가설을 부등식으로 표현 (H0: 귀무가설, H1: 대립가설, A=lv[0], B=lv[1])
+    hypotheses = {
+        "two-sided": {"H0": f"{lv[0]} = {lv[1]}", "H1": f"{lv[0]} ≠ {lv[1]}"},
+        "less":      {"H0": f"{lv[0]} ≥ {lv[1]}", "H1": f"{lv[0]} < {lv[1]}"},
+        "greater":   {"H0": f"{lv[0]} ≤ {lv[1]}", "H1": f"{lv[0]} > {lv[1]}"},
+    }
+
+    rows = []
+    # 양측, 좌측단측, 우측단측을 일괄 검정
+    for alt in ("two-sided", "less", "greater"):
+        # 적용 검정에 맞춰 대립가설 방향을 전달하여 검정 수행
+        if test_name == "Mann-Whitney U test":
+            stat, p = mannwhitneyu(a, b, alternative=alt)
+        elif test_name == "Student t-test":
+            stat, p = ttest_ind(a, b, equal_var=True, alternative=alt)
+        else:
+            stat, p = ttest_ind(a, b, equal_var=False, alternative=alt)
+
+        # p < alpha 이면 통계적으로 유의 (귀무가설 기각)
+        significant = p < alpha
+
+        rows.append({
+            "test": test_name,
+            "alternative": alt,
+            "statistic": round(float(stat), 4),
+            "p-value": round(float(p), 4),
+            "significant": significant,
+            # 유의하면 대립가설(H1) 채택, 아니면 귀무가설(H0) 유지
+            "result": hypotheses[alt]["H1"] if significant else hypotheses[alt]["H0"]
+        })
+
+    # 세 방향 결과를 표로 정리하여 반환 --> 함수 맨 마지막에 return문 필요
+    result_df = DataFrame(rows).set_index(["test", "alternative"])
+
+    # 시각화 옵션이 True인 경우, 시각화 수행
+    if plot:
+        # wide 형식을 long 형식으로 변환하여 그룹별 박스플롯 작성
+        melt_df = melt(data, value_vars=[group1, group2], var_name="group", value_name="value")
+
+        fig, ax = my_plot.init(title=title, width=width, height=height, xlabel=xlabel, ylabel=ylabel)
+        my_plot.boxplot(data=melt_df, x="group", y="value", hue="group", palette=palette, ax=ax)
+
+        # 독립표본 검정 결과를 시각화에 추가
+        annotator = Annotator(data=melt_df, x='group', y='value',   # 데이터프레임, x축, y축 변수 지정
+                              pairs=[(lv[0], lv[1])],               # 비교할 그룹 쌍
+                              ax=ax)                                # 그래프 축
+
+        # 가설검정 알고리즘 종류 (적용된 검정에 맞춰 지정)
+        if test_name == "Mann-Whitney U test":
+            annot_test = "Mann-Whitney"
+        elif test_name == "Student t-test":
+            annot_test = "t-test_ind"
+        else:
+            annot_test = "t-test_welch"
+
+        annotator.configure(test=annot_test)
+        annotator.apply_and_annotate()
+        my_plot.show()
+
+    return result_df
+
+
+
+
+
+def anova_oneway(data, y, between, alpha=0.05):
+    """ 일원분산분석 (One-way ANOVA)
+
+    Args:
+        data (DataFrame): 검정 대상 데이터프레임 (long 형식)
+        yy (str): 종속변수(연속형) 컬럼명
+        between (str): 집단을 구분하는 독립변수(명목형) 컬럼명
+        alpha (float): 유의수준 (기본값: 0.05)
+
+    Returns:
+        DataFrame: pingouin의 분산분석 결과표(One-way ANOVA 또는 Welch-ANOVA)에 설명용 컬럼을 덧붙인 결과표.
+            - test: 사용한 검정 이름
+            - effect_size: np2 기준 효과크기 해석 라벨 (큼/중간/작음/미미함)
+    
+    """
+    # 분석에 사용할 두 컬럼만 추출하고 결측 행 제거
+    df = data[[y, between]].dropna()
+
+    # 집단별 종속변수 값을 wide 형태(집단=컬럼)로 모아 가정 검정에 전달
+    wide = my_prep.long2wide(df, hue=between, values=y)
+    assumption = test_assumptions(wide, columns=list(wide.columns), alpha=alpha)
+
+    # 등분산성 충족 여부 추출 (정규성은 robust 가정에 따라 분기에 사용하지 않음)
+    equal_var = bool(assumption[assumption["test"] == "equal_var"]["result"].iloc[0])
+
+    # 등분산성 여부에 따라 일반 ANOVA / Welch-ANOVA 선택
+    if equal_var:
+        anova_name = "anova"
+        aov = anova(data=df, dv=y, between=between)
+    else:
+        anova_name = "welch_anova"
+        aov = welch_anova(data=df, dv=y, between=between)
+
+    # 어떤 검정을 사용했는지 식별할 수 있도록 맨 앞에 test 컬럼 추가
+    aov.insert(0, "test", anova_name)
+
+    # --- 효과크기 해석 컬럼 추가 ---
+    # pingouin이 제공하는 Cohen의 효과크기 기준표로 해석하여 라벨 부여
+    #   >= 0.14 -> 큼, >= 0.06 -> 중간, >= 0.01 -> 작음, 그 미만 -> 미미함
+    conditions = [
+        aov["np2"] >= 0.14,
+        aov["np2"] >= 0.06,
+        aov["np2"] >= 0.01,
+    ]
+    labels = ["Large", "Medium", "Small"]
+    aov["effect_size"] = np.select(conditions, labels, default="Negligible")
+
+    return aov
