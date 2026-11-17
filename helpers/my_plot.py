@@ -759,7 +759,7 @@ def plot_hull(data, x, y, hue, palette, ax):
         ax.fill(df_c.iloc[points, 0], df_c.iloc[points, 1], alpha=0.1, color=color)
 
 # Lmplot 함수 정의
-def Lmplot(data, x, y, hue=None, palette=None, col= None, row=None, markers='o', 
+def lmplot(data, x, y, hue=None, palette=None, col= None, row=None, markers='o', 
             scatter_edgecolor='#ffffff', scatter_linewidths=1.5, scatter_size=50,
             scatter_alpha=0.8, linestyle="-", linecolor=None, linewidth= 2, 
             title=None, xlabel=None, ylabel=None, width=1280, height=640, 
@@ -902,3 +902,61 @@ def pairplot(data, x=None, y=None, hue=None, palette=None, diag_kind="kde", reg=
         x.grid(True, alpha=0.5)                 # 격자 추가
 
     show(save_path) # 화면 출력
+
+
+
+
+
+def pointplot(data=None, x=None, y=None, hue=None, order=None, hue_order=None,
+              estimator="mean", errorbar="se", capsize=0.1, dodge=False, markers="o",
+              linestyles="-", palette=None, color=None, title=None, xlabel=None, ylabel=None,
+              legend_title=None, width=1280, height=640, save_path=None, ax=None):    
+    
+    """ 
+    점 그래프(pointplot)를 그린다. 범주별 추정치(기본: 평균)와 오차범위를 점과 선으로 표현하므로
+    분산분석의 상호작용 플롯(interaction plot) 등에 활용한다.
+
+    Args:
+        data: 시각화할 데이터.
+        x: x축 범주 컬럼명.
+        y: y축 값 컬럼명.
+        hue: 범주 구분 컬럼명.
+        order: x축 범주의 표시 순서.
+        hue_order: hue 범주의 표시 순서.
+        estimator: 각 범주의 대표값 추정 방법 (기본 'mean').
+        errorbar: 오차범위의 표현 방식 (예: 'se', 'sd', ('ci', 95)).
+        capsize: 오차범위 막대 끝 모자의 크기.
+        dodge: hue별 점이 겹치지 않도록 좌우로 분리할지 여부 또는 분리 폭.
+        markers: 점 마커 모양.
+        linestyles: 선 스타일.
+        palette: 색상 팔레트 이름.
+        color: 단일 색상 (hue가 없을 때 사용).
+        title: 그래프 제목.
+        xlabel: x축 레이블.
+        ylabel: y축 레이블.
+        legend_title: 범례 제목 (hue가 있을 때 표시).
+        width: 캔버스 가로 픽셀.
+        height: 캔버스 세로 픽셀.
+        save_path: 이미지 저장 경로.
+        ax: 그래프를 그릴 Axes 객체. None이면 init 함수로 새로 생성.
+    """
+    
+    # 그래프 초기화
+    fig = None
+    if ax is None:
+        fig, ax = init(width=width, height=height, title=title, xlabel=xlabel, ylabel=ylabel)
+
+    # 점 그래프 그리기
+    sb.pointplot(data=data, x=x, y=y, hue=hue, order=order, hue_order=hue_order,
+                 estimator=estimator, errorbar=errorbar, capsize=capsize, dodge=dodge,
+                 markers=markers, linestyles=linestyles, palette=palette, color=color, ax=ax)
+
+    # 범례 제목 설정 (hue가 있을 때)
+    if hue is not None and legend_title is not None:
+        legend = ax.get_legend()
+        if legend is not None:
+            legend.set_title(legend_title)
+
+    # 그래프 표시
+    if fig is not None:
+        show(save_path=save_path)
