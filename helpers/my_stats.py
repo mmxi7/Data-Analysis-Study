@@ -1,14 +1,23 @@
 import numpy as np
 from math import sqrt
-from pandas import DataFrame, Series, melt, concat
+from itertools import combinations
+from IPython.display import display
+from pandas import DataFrame, Series, melt, concat, crosstab
 from scipy.stats import t
 from scipy.stats import normaltest, bartlett, levene
 from scipy.stats import ttest_1samp, wilcoxon, ttest_rel, ttest_ind, mannwhitneyu
+from scipy.stats import pearsonr, spearmanr
+from scipy.stats import chisquare, chi2_contingency, fisher_exact
 
+from statsmodels.stats.diagnostic import linear_reset
 from statannotations.Annotator import Annotator
 
 from pingouin import anova, welch_anova
 from pingouin import pairwise_tukey, pairwise_gameshowell
+from statsmodels.formula.api import ols
+import statsmodels.api as sm
+from statsmodels.stats.outliers_influence import variance_inflation_factor
+from statsmodels.tools.tools import add_constant
 
 from . import my_plot
 from . import my_prep
@@ -823,3 +832,464 @@ def posthoc_twoway(data, y, between, alpha=0.05, plot=True, summary=True,
                 print(sig[["A", "B", "diff", "pval", "significant"]].to_string(index=False))
 
     return result
+
+
+
+
+
+def correlation(data, x, y, alpha=0.05, plot=True, palette=None,
+                title=None, xlabel=None, ylabel=None, width=1280, height=640,
+                save_path=None):
+    """두 연속형 변수의 상관분석을 일괄 수행하는 함수
+
+    Args:
+        data (DataFrame): 분석 대상 데이터프레임
+        x (str): 첫 번째 연속형 변수 컬럼명
+        y (str): 두 번째 연속형 변수 컬럼명
+        alpha (float): 유의수준 (기본값: 0.05)
+        plot (bool): 산점도(회귀선 포함)를 시각화할지 여부 (기본값: True)
+        palette (str or list): 색상 팔레트 (기본값: None)
+        title (str): 그래프 제목 (기본값: None)
+        xlabel (str): x축 라벨 (기본값: None)
+        ylabel (str): y축 라벨 (기본값: None)
+        width (int): 그래프 너비 (기본값: 1280)
+        height (int): 그래프 높이 (기본값: 640)
+        save_path (str): 그래프 저장 경로 (기본값: None)
+
+    Returns:
+        DataFrame: (x, y)를 인덱스로 하는 단일 행 결과표    
+    """
+
+    # --- 1) 같은 행끼리 비교해야 하므로 두 컬럼을 함께 결측 행 제거 ---
+    pair = data[[x, y]].dropna()
+    vx, vy = pair[x], pair[y]
+
+    # --- 2) 정규성 검정 (test_assumption) ---
+    report = test_assumptions(pair, columns=[x, y], alpha=alpha)
+    norm_x = bool(report.loc[x, "result"])
+    norm_y = bool(report.loc[y, "result"])
+
+    # --- 3) 선형성 검정 (Ramsey RESET Test) ---
+    # H0: 모형이 올바르게 설정됨(선형). p >= alpha 이면 선형성 충족.
+    X = sm.add_constant(vx)
+    model = sm.OLS(vy, X).fit()
+    linearity = bool(linear_reset(model, power=2, use_f=True).pvalue >= alpha)
+
+    # --- 4) 이상치(영향점) 및 왜도 점검 ---
+    # IQR(사분위수) 울타리를 벗어난 행을 제외한 데이터를 별도로 만들어,
+    # 피어슨 r이 크게 바뀌면(>=0.1) '영향점'으로 판단한다.
+    # (단순히 이상치가 존재하는 것과 상관계수를 왜곡하는 것은 다르다.)
+    trimmed = pair.copy()
+    for col in [x, y]:
+        # 울타리는 항상 원본(pair) 기준으로 계산
+        q1 = pair[col].quantile(0.25)
+        q3 = pair[col].quantile(0.75)
+        iqr = q3 - q1
+        trimmed = trimmed[(trimmed[col] >= q1 - 1.5 * iqr) &
+                          (trimmed[col] <= q3 + 1.5 * iqr)]
+
+    r_full = pearsonr(vx, vy)[0]
+    r_trim = pearsonr(trimmed[x], trimmed[y])[0]
+    influential = bool(abs(r_full - r_trim) >= 0.1)
+    high_skew = bool(abs(vx.skew()) > 1 or abs(vy.skew()) > 1)
+
+    # --- 5) 가정에 따른 상관계수 선택 ---
+    # 모든 가정을 충족하면 피어슨, 하나라도 위반하면 스피어만을 사용한다.
+    use_pearson = linearity and norm_x and norm_y and \
+                  (not influential) and (not high_skew)
+    if use_pearson:
+        method = "Pearson"
+        coef, p = pearsonr(vx, vy)
+    else:
+        method = "Spearman"
+        coef, p = spearmanr(vx, vy)
+
+    # --- 6) 상관 강도 해석 라벨 ---
+    # |r| > 0.7 -> 강함, 0.3 < |r| <= 0.7 -> 중간,
+    # 0 < |r| <= 0.3 -> 약함, 그 외 -> 없음
+    a = abs(coef)
+    if a > 0.7:     strength = "Strong"
+    elif a > 0.3:   strength = "Moderate"
+    elif a > 0:     strength = "Weak"
+    else:           strength = "None"
+
+    # --- 7) 가정 점검 결과와 선택된 상관계수를 단일 행 결과표로 정리 ---
+    row = {
+        "x": x,
+        "y": y,
+        "method": method,
+        "coef": round(float(coef), 4),
+        "p-value": round(float(p), 4),
+        "strength": strength,
+        "significant": bool(p < alpha),
+        "normality_x": norm_x,
+        "normality_y": norm_y,
+        "linearity": linearity,
+        "influential_outlier": influential,
+        "high_skew": high_skew,
+    }
+    result_df = DataFrame([row]).set_index(["x", "y"])
+
+    # --- 8) 시각화 ---
+    if plot:
+        my_plot.scatterplot(data=pair, x=x, y=y, palette=palette,
+                            title=title, xlabel=xlabel, ylabel=ylabel,
+                            width=width, height=height, save_path=save_path)
+
+    # --- 9) 결과 반환 ---
+    return result_df
+
+
+
+
+
+def multi_correlation(data, columns=None, alpha=0.05, plot=True, palette=None,
+                      diag_kind="kde", reg=False, title=None,
+                      width=1280, height=640, save_path=None):
+    """여러 변수 쌍에 대한 상관분석을 일괄 수행하고 결과를 출력하는 함수
+
+    Args:
+        data (DataFrame): 분석 대상 데이터프레임
+        columns (list): 분석에 사용할 컬럼명 목록 (기본값: None -> 수치형 컬럼 전체)
+        alpha (float): 유의수준 (기본값: 0.05)
+        plot (bool): 산점도 행렬을 시각화할지 여부 (기본값: True)
+        palette (str or list): 색상 팔레트 (기본값: None)
+        diag_kind (str): 산점도 행렬 대각선 그래프 종류 'hist' 또는 'kde' (기본값: "kde")
+        reg (bool): 산점도 행렬에 회귀선 표시 여부 (기본값: False)
+        title (str): 그래프 제목 (기본값: None)
+        width (int): 그래프 너비 (기본값: 1280)
+        height (int): 그래프 높이 (기본값: 1024)
+        save_path (str): 그래프 저장 경로 (기본값: None)
+
+    Returns:
+        DataFrame: 변수 쌍별 상관분석 결과표
+    """
+
+
+    # --- 1) 준비작업 ---
+    # 분석에 사용할 컬럼 결정 (지정하지 않으면 수치형 컬럼 전체 사용)
+    if columns is None:
+        columns = data.select_dtypes(include="number").columns.tolist()
+
+    # 하나의 컬럼명이 문자열로 전달될 경우 리스트로 감싸준다.
+    if type(columns) == str:
+        columns = [columns]
+
+    # 상관분석은 두 개 이상의 변수가 있어야 수행할 수 있다.
+    if len(columns) < 2:
+        raise ValueError("상관분석을 위해서는 두 개 이상의 컬럼이 필요합니다.")
+
+
+    # --- 2) 변수 조합 쌍별 상관분석 ---
+    # 각 컬럼 조합에 대해 correlation()을 호출하여 단일 행 결과를 세로로 누적
+    column_pairs = list(combinations(columns, 2))
+    corr_df = DataFrame()    # <-- 리턴할 결과표
+
+    for col1, col2 in column_pairs:
+        corr = correlation(data, col1, col2, alpha=alpha, plot=False)
+        corr_df = concat([corr_df, corr])
+
+
+    # --- 3) 상관행렬로 결과표 재배치 ---
+    # 대각선(자기 자신과의 상관)은 1.0 으로 초기화
+    corr_matrix = DataFrame(1.0, index=columns, columns=columns)
+
+    # 각 변수 조합의 상관계수(coef)를 대칭이 되도록 양쪽에 채운다.
+    for (col1, col2), coef in corr_df["coef"].items():
+        corr_matrix.loc[col1, col2] = coef
+        corr_matrix.loc[col2, col1] = coef
+
+    # 배경 색상(그라데이션)을 적용한 상관행렬 출력
+    display(corr_matrix.style
+            .background_gradient(cmap="coolwarm", vmin=-1, vmax=1)
+            .format("{:.3f}"))
+
+
+    # --- 4) 산점도 행렬 시각화 ---
+    if plot:
+        my_plot.pairplot(data=data[columns], palette=palette,
+                         diag_kind=diag_kind, reg=reg, title=title,
+                         width=width, height=height, save_path=save_path)
+
+
+    # --- 5) 결과 반환 ---
+    return corr_df
+
+
+
+
+
+def compute_vif(df, columns=None):
+    """
+    각 변수의 VIF를 statsmodels 패키지로 계산해서 반환.
+    """
+
+    # --- 1) 처리 대상 컬럼 결정 ---
+    if columns is None:
+        target = df.select_dtypes(include='number')
+    else:
+        # df에 존재하지 않는 컬럼이 전달되었는지 체크
+        missing = []
+        for col in columns:
+            if col not in df.columns:
+                missing.append(col)
+
+        if missing:
+            raise KeyError(f'df 에 존재하지 않는 컬럼입니다: {missing}')
+
+        # 원본 데이터프레임에서 columns에 해당하는 컬럼만 추출
+        target = df[columns]
+
+        # VIF는 수치 행렬 연산이므로 비수치형이 섞이면 안 된다
+        non_numeric = list(target.select_dtypes(exclude='number').columns)
+        if non_numeric:
+            raise TypeError(f'수치형이 아닌 컬럼은 VIF를 계산할 수 없습니다: {non_numeric}')
+
+    # --- 2) VIF 계산 ---
+    # 회귀모형에 절편(상수항)이 있어야 올바른 VIF가 나오므로 절편(상수항)을 추가
+    X = add_constant(target)
+
+    # 각 변수(열)별로 VIF를 하나씩 계산해서 리스트에 담는다.
+    vif_values = []
+
+    # 각 변수에 대해 VIF를 계산
+    for i in range(X.shape[1]):
+        # variance_inflation_factor는 i번째 변수에 대한 VIF를 계산
+        vif_i = variance_inflation_factor(X.values, i)
+        vif_values.append(vif_i)
+
+    # 계산한 VIF 값들을 변수명과 함께 DataFrame으로 정리
+    vif = DataFrame({'VIF': vif_values}, index=X.columns)
+
+    # 상수항(const)은 분석 대상이 아니므로 제외하고 인덱스 오름차순으로 먼저 정렬
+    # 그 후 VIF 기준 내림차순으로 정렬해서 반환
+    # 단, 동점일 경우 기존 순서를 유지하도록 kind="stable" 옵션 사용
+    vif = (vif.drop('const').sort_index()
+           .sort_values(by='VIF', ascending=False, kind="stable"))
+
+    return vif
+
+
+
+
+
+def chi2_goodness_of_fit(data, column, expected=None, order=None, alpha=0.05,
+                         plot=True, palette=None, title=None, xlabel=None,
+                         ylabel=None, width=1280, height=640, save_path=None):
+    """적합도 검정을 가정확인부터 강도까지 일괄 수행하는 함수
+
+    Args:
+        data (DataFrame): 분석 대상 데이터프레임
+        columns (str): 검정 대상 범주형 변수명
+        expected (list | None): 각 범주의 기대빈도 또는 기대비율. None이면 균등분포 (기본값: None)
+        order: 명목형 범주의 표시, 계산 순서를 지정하는 리스트
+        alpha (float): 유의수준 (기본값: 0.05)
+        plot (bool): 결과를 시각화할지 여부 (기본값: True)
+        palette (str or list): 색상 팔레트 (기본값: None)
+        title (str): 그래프 제목 (기본값: None)
+        xlabel (str): x축 라벨 (기본값: None -> 변수명)
+        ylabel (str): y축 라벨 (기본값: None -> "빈도")
+        width (int): 그래프 너비 (기본값: 1280)
+        height (int): 그래프 높이 (기본값: 640)
+        save_path (str): 그래프 저장 경로 (기본값: None)
+
+    Returns:
+        DataFrame: 단일 행 결과표        
+    """
+    # --- 1) 관측빈도 집계 ---
+    # 범주별 관측빈도 집계 (order가 있으면 그 순서로, 없으면 라벨 순으로 정렬)
+    if order is not None:
+        observed = data[column].value_counts().reindex(order)
+    else:
+        observed = data[column].value_counts().sort_index()
+    n = int(observed.sum())
+    k = len(observed)
+
+    # --- 2) 기대빈도 결정 ---
+    # None이면 균등분포, 합이 1 이하인 비율이면 빈도로 환산, 그 외는 빈도로 사용
+    if expected is None:
+        exp = np.full(k, n / k)
+    elif np.sum(expected) <= 1.0001:
+        exp = np.array(expected, dtype=float) * n
+    else:
+        exp = np.array(expected, dtype=float)
+
+    # --- 3) 가정 확인 ---
+    # 기대빈도 점검 (5 이상 셀이 80% 이상 + 1 미만 셀 없음)
+    pct_ok = float((exp >= 5).mean())
+    min_exp = float(exp.min())
+    assumption = bool(pct_ok >= 0.8 and min_exp >= 1)
+    recommend = "Chi-square goodness-of-fit" if assumption else "category merge"
+
+    # --- 4) 적합도 검정 수행 ---
+    # 카이제곱 적합도 검정 (관측빈도 vs 기대빈도)
+    chi2, p = chisquare(f_obs=observed.values, f_exp=exp)
+
+    # --- 5) 강도 확인 ---
+    # 효과크기: Cohen's w = sqrt(chi2 / n)
+    w = float(np.sqrt(chi2 / n))
+
+    # 효과크기 강도 라벨
+    # --> (Cohen 관례: < 0.1 미미 / < 0.3 약함 / < 0.5 보통 / 그 이상 강함)
+    if w < 0.1:
+        strength = "Negliglible"
+    elif w < 0.3:
+        strength = "Weak"
+    elif w < 0.5:
+        strength = "Moderate"
+    else:
+        strength = "Strong"
+
+    # --- 6) 결과표 생성 ---
+    result_df = DataFrame([{
+        "chi2": round(float(chi2), 4),
+        "dof": k - 1,
+        "p-value": round(float(p), 6),
+        "significant": bool(p < alpha),
+        "effect(w)": round(w, 4),
+        "strength": strength,
+        "min_expected": round(min_exp, 2),
+        "assumption": assumption
+    }], index=["Chi-square goodness-of-fit"])
+
+    # --- 7) 결과 시각화 ---
+    # 관측빈도 vs 기대빈도 막대그래프 (long 형식으로 변환해 hue로 비교)
+    if plot:
+        cats = list(observed.index)
+        plot_df = DataFrame({
+            column: cats * 2,
+            "구분": ["관측"] * len(cats) + ["기대"] * len(cats),
+            "빈도": list(observed.values) + list(exp),
+        })
+        my_plot.barplot(data=plot_df, x=column, y="빈도", hue="구분", order=cats,
+                        palette=palette, title=title,
+                        xlabel=xlabel if xlabel is not None else column,
+                        ylabel=ylabel if ylabel is not None else "빈도",
+                        width=width, height=height, save_path=save_path)
+
+    return result_df
+
+
+
+
+
+def _chi2_crosstab(data, row, col, kind, alpha=0.05, plot=True, palette=None, orient='v',
+                   title=None, xlabel=None, ylabel=None, width=1280, height=640, save_path=None):
+    """독립성 검정의 공통 처리부 (가정확인 -> 카이제곱/피셔 분기 -> 크라메르 V)
+
+    Args:
+        data (DataFrame): 분석 대상 데이터프레임
+        row (str): 행 범주형 변수명
+        col (str): 열 범주형 변수명
+        kind (str): 검정 종류 (독립성 검정: "independence" / 동질성 검정: "homogeneity")
+        alpha (float): 유의수준 (기본값: 0.05)
+        plot (bool): 결과를 시각화할지 여부 (기본값: True)
+        palette (str or list): 색상 팔레트 (기본값: None)
+        orient (str): 그래프 방향 ('v' 또는 'h', 기본값: 'v')
+        title (str): 그래프 제목 (기본값: None)
+        xlabel (str): x축 라벨 (기본값: None -> x 변수명)
+        ylabel (str): y축 라벨 (기본값: None -> "비율(%)")
+        width (int): 그래프 너비 (기본값: 1280)
+        height (int): 그래프 높이 (기본값: 640)
+        save_path (str): 그래프 저장 경로 (기본값: None)
+
+    Returns:
+        DataFrame: (row, col)를 인덱스로 하는 단일 행 결과표        
+    """
+    # --- 1) 대상 데이터 전처리 ---
+    # 두 범주형 변수로 교차표(관측빈도) 생성
+    ct = crosstab(data[row], data[col])
+
+    # --- 2) 가정 확인 ---
+    # 카이제곱으로 기대빈도 확보 (2x2는 예이츠 보정 기본 적용) 후 가정 검정
+    chi2, p_chi, dof, expected = chi2_contingency(ct)
+    pct_ok = float((expected >= 5).mean())
+    min_exp = float(expected.min())
+    assumption = bool(pct_ok >= 0.8 and min_exp >= 1)
+
+    # --- 3) 검정 수행 (가정에 따른 분기) ---
+    # 가정 위반 + 2x2 이면 피셔의 정확검정으로, 그 외는 카이제곱으로 분기
+    if (not assumption) and tuple(ct.shape) == (2, 2):
+        test_name = "Fisher's exact test"
+        _, p = fisher_exact(ct)
+        chi2_out, dof_out = np.nan, np.nan
+    else:
+        test_name = "Chi-square test of %s" % kind
+        p, chi2_out, dof_out = p_chi, chi2, dof
+
+    # --- 4) 강도 확인 ---
+    n = int(ct.values.sum())
+    min_dim = min(ct.shape) - 1
+    cramers_v = float(np.sqrt(chi2 / (n * min_dim))) if min_dim > 0 else np.nan
+
+    # 효과크기 강도 라벨 (Cohen 관례: < 0.1 미미 / < 0.3 약함 / < 0.5 보통 / 그 이상 강함)
+    if cramers_v < 0.1:
+        strength = "Negliglible"
+    elif cramers_v < 0.3:
+        strength = "Weak"
+    elif cramers_v < 0.5:
+        strength = "Moderate"
+    else:
+        strength = "Strong"
+
+    # --- 5) 결과표 생성 ---
+    result_df = DataFrame([{
+        "row": row,
+        "col": col,
+        "test": test_name,
+        "chi2": np.nan if np.isnan(chi2_out) else round(float(chi2_out), 4),
+        "dof": dof_out,
+        "p-value": round(float(p), 6),
+        "significant": bool(p < alpha),
+        "effect(V)": round(cramers_v, 4),
+        "strength": strength,
+        "min_expected": round(min_exp, 2),
+        "assumption": assumption
+    }]).set_index(["row", "col"])
+
+    # --- 6) 결과 시각화 ---
+    # 행 범주별 열 범주 구성비를 100& 누적 막대그래프로 표시
+    if plot:
+        tmp = data[[row, col]].copy()
+        tmp["_n"] = 1       # 빈도 집계용 보조 컬럼
+        my_plot.stackplot(data=tmp, x=row, y="_n", hue=col, orient=orient,
+                          aggfunc="sum", ratio=True, palette=palette, title=title,
+                          xlabel=xlabel if xlabel is not None else row,
+                          ylabel=ylabel if ylabel is not None else "비율(%)",
+                          width=width, height=height, save_path=save_path)
+
+    return result_df
+
+
+
+
+
+def chi2_independence(data, x, y, alpha=0.05,
+                      plot=True, palette=None, orient='v',
+                      title=None, xlabel=None, ylabel=None,
+                      width=1280, height=640, save_path=None):
+    """독립성 검정을 가정확인부터 강도까지 일괄 수행하는 함수
+    
+        _chi2_crosstab()를 호출하여, 두 범주형 변수의 독립성 검정을 수행한다.
+    """
+    return _chi2_crosstab(data, x, y, "independence", alpha,
+                          plot=plot, palette=palette, orient=orient,
+                          title=title, xlabel=xlabel, ylabel=ylabel,
+                          width=width, height=height, save_path=save_path)
+
+
+
+
+
+def chi2_homogeneity(data, group, category, alpha=0.05,
+                      plot=True, palette=None, orient='v',
+                      title=None, xlabel=None, ylabel=None,
+                      width=1280, height=640, save_path=None):
+    """동질성 검정을 가정확인부터 강도까지 일괄 수행하는 함수
+    
+        _chi2_crosstab()를 호출하여, 두 범주형 변수의 동질성 검정을 수행한다.
+    """
+    return _chi2_crosstab(data, group, category, "homogeneity", alpha,
+                          plot=plot, palette=palette, orient=orient,
+                          title=title, xlabel=xlabel, ylabel=ylabel,
+                          width=width, height=height, save_path=save_path)
